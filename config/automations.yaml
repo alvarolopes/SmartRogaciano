@@ -1,1 +1,27 @@
-﻿[]
+- id: tv_auto_iniciar_dashboard_cameras
+  alias: TV - Auto iniciar dashboard das cameras
+  description: Inicia automaticamente o dashboard no Chromecast quando a TV acorda.
+  mode: single
+  trigger:
+    - platform: state
+      entity_id: media_player.quarto_do_vroou
+  condition:
+    - condition: state
+      entity_id: input_boolean.auto_iniciar_dashboard_tv
+      state: "on"
+    - condition: template
+      value_template: >
+        {{ trigger.to_state is not none and trigger.to_state.state not in ['off', 'unavailable', 'unknown'] }}
+    - condition: template
+      value_template: >
+        {{ trigger.from_state is none or trigger.from_state.state in ['off', 'unavailable', 'unknown'] }}
+    - condition: template
+      value_template: >
+        {% set last = this.attributes.last_triggered %}
+        {{ last is none or (now() - last).total_seconds() > 45 }}
+  action:
+    - delay: "00:00:08"
+    - condition: template
+      value_template: >
+        {{ states('media_player.quarto_do_vroou') not in ['off', 'unavailable', 'unknown'] }}
+    - action: script.mostrar_cameras_na_tv

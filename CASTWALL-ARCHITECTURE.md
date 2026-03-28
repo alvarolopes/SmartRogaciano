@@ -191,6 +191,17 @@ O fluxo esperado e:
 3. o `castwall` persistir o perfil
 4. se o cast estiver ativo, recastar a pagina automaticamente
 
+## Start automatico apos ligar a TV
+
+O inicio automatico do dashboard mora no Home Assistant, nao no castwall. O helper `input_boolean.auto_iniciar_dashboard_tv` permite desligar esse comportamento sem editar arquivos.
+
+A automacao `TV - Auto iniciar dashboard das cameras` observa `media_player.quarto_do_vroou` saindo de `off`/`unavailable`/`unknown`, aplica um atraso curto para o Chromecast acordar e so entao chama `script.mostrar_cameras_na_tv`.
+
+Separacao de responsabilidades:
+
+- Home Assistant detecta o momento certo de iniciar o cast.
+- O watchdog do castwall mantem o DashCast vivo depois que a sessao ja existe.
+
 ## Runtime de rede do host
 
 Este computador pode operar de duas formas:

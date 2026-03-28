@@ -1,4 +1,4 @@
-﻿ambiente_rua:
+ambiente_rua:
   name: Ambiente Rua
   icon: mdi:road-variant
   initial: true
@@ -78,4 +78,7 @@ ambiente_terraco:
   icon: mdi:home-roof
   initial: true
 
-
+auto_iniciar_dashboard_tv:
+  name: Auto iniciar dashboard TV
+  icon: mdi:television-play
+  initial: true

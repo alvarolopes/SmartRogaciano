@@ -112,6 +112,12 @@ No dia a dia, a troca de perfil deve ser feita sem editar `.env.local`, usando:
 
 O `castwall` persiste o ultimo perfil aplicado e recasta o dashboard automaticamente quando a TV ja estiver ativa.
 
+## Auto-start da TV
+
+O helper `input_boolean.auto_iniciar_dashboard_tv` controla se o Home Assistant deve iniciar o dashboard automaticamente quando o `media_player.quarto_do_vroou` sai de `off`/`unavailable`/`unknown`.
+
+Quando esse helper esta ligado, a automacao `TV - Auto iniciar dashboard das cameras` espera alguns segundos para o Chromecast estabilizar antes de chamar `script.mostrar_cameras_na_tv`. O castwall watchdog continua responsavel apenas por manter uma sessao ja iniciada.
+
 ## Rede
 
 Este projeto precisa conviver com dois cenarios:
