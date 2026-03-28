@@ -195,7 +195,7 @@ O fluxo esperado e:
 
 O inicio automatico do dashboard mora no Home Assistant, nao no castwall. O helper `input_boolean.auto_iniciar_dashboard_tv` permite desligar esse comportamento sem editar arquivos.
 
-A automacao `TV - Auto iniciar dashboard das cameras` observa `media_player.quarto_do_vroou` saindo de `off`/`unavailable`/`unknown`, aplica um atraso curto para o Chromecast acordar e so entao chama `script.mostrar_cameras_na_tv`.
+A automacao `TV - Auto iniciar dashboard das cameras` observa `media_player.quarto_do_vroou` voltando de `unavailable`/`unknown` para um estado acessivel. Isso inclui o retorno para `off`, que neste Chromecast significa estado ocioso e pronto para receber o dashboard. Depois disso ela aplica um atraso curto e chama `script.mostrar_cameras_na_tv`.
 
 Separacao de responsabilidades:
 
