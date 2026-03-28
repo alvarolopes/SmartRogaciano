@@ -1,6 +1,8 @@
 # Floorplan da Casa
 
 ## Arquivos principais
+- Quick fix de sincronismo entre o floorplan do Home Assistant e o DashCast vai direto na `main`, sem PR/issue, desde que seja apenas ajuste de asset/mapeamento sem refactor estrutural.
+- Sempre que `www/floorplan/rogaciano.svg` ou `www/floorplan/rogaciano.css` mudar, atualize o cache-buster em `floorplan/floorplan.yaml` para forcar recarga no app/navegador do Home Assistant.
 - www/floorplan/rogaciano.svg: copia publicada do SVG da casa, com IDs normalizados para camera.varanda, lampada.terraco1 e lampada.terraco2.
 - www/floorplan/rogaciano.css: regras visuais do painel.
 - www/floorplan/floorplan.js: frontend do ha-floorplan instalado manualmente.
@@ -22,7 +24,7 @@
 - lampada.piscina3 -> switch.pisicina3_interruptor_1
 - lampada.piscina4 -> switch.pisicina4_interruptor_1
 - lampada.terraco1 -> switch.terraco1_interruptor_1
-- lampada.terraco2 -> switch.terraco2_interruptor_1
+- lampada.terraco2 -> light.terraco2_interruptor_1
 - lampada.terraco3 -> switch.terraco3_interruptor_1
 - lampada.quarto_vroou -> light.ventilador_do_vroou
 - ventilador.quarto_vroou -> fan.ventilador_do_vroou

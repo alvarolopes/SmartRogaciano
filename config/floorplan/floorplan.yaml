@@ -1,5 +1,6 @@
-image: /local/floorplan/rogaciano.svg?v=20260325
-stylesheet: /local/floorplan/rogaciano.css?v=20260325
+# Quick fix: quando rogaciano.svg ou rogaciano.css mudar, atualize o cache-buster abaixo para forcar recarga no Home Assistant.
+image: /local/floorplan/rogaciano.svg?v=20260328b
+stylesheet: /local/floorplan/rogaciano.css?v=20260328b
 console_log_level: warn
 log_level: warn
 defaults:
@@ -265,7 +266,7 @@ rules:
       service_data: |
         > return functions.deviceStateClass(entity);
   - entities:
-      - switch.terraco2_interruptor_1
+      - light.terraco2_interruptor_1
     element: lampada.terraco2
     tap_action: toggle
     double_tap_action: more-info
