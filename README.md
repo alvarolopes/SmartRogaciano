@@ -1,31 +1,48 @@
-﻿# Home Assistant em Docker no Windows
+# Rogaciano
 
-Esta pasta deixa uma base pronta para rodar o Home Assistant em Docker com persistencia em disco, restart automatico do container e um ponto de partida para:
+Projeto privado de Home Assistant em Docker no Windows, com um dashboard customizado para TV que combina:
 
-- conectar cameras Tapo
-- montar um dashboard para TV
-- enviar esse dashboard para o Chromecast
+- floorplan da casa
+- cameras Tapo
+- envio automatico para Chromecast via `castwall`
 
-## O que foi criado
+## Stack
 
-- `docker-compose.yml`: stack principal do Home Assistant
-- `config/`: configuracao persistente do Home Assistant
-- `media/`: pasta para arquivos locais de midia
-- `scripts/Start-HomeAssistant.ps1`: sobe a stack e espera o Docker ficar pronto
-- `HomeAssistantStartup.cmd`: launcher simples para colocar no startup do Windows
-- `Register-HomeAssistantStartupTaskAtLogon.ps1`: tentativa de registro por tarefa agendada
+- `homeassistant`
+  - container principal do Home Assistant
+  - configuracao persistida em `config/`
 
-O bind mount `./config:/config` e o que garante que suas configuracoes sobrevivam ao reinicio do PC e do container.
+- `castwall`
+  - servico Flask customizado em `8090`
+  - captura snapshots RTSP
+  - monta a pagina do dashboard
+  - envia o dashboard para o Chromecast
 
-## Antes de subir
+## Estrutura
 
-1. Confirme no Docker Desktop que ele esta configurado para iniciar com o Windows.
-2. Deixe o Docker em modo Linux containers.
-3. Copie `.env.example` para `.env.local` e ajuste os valores locais, especialmente IPs, URLs e credenciais RTSP.
+- `docker-compose.yml`
+  - sobe `homeassistant` e `castwall`
+
+- `castwall/`
+  - codigo do servico responsavel pelo dashboard da TV
+
+- `config/`
+  - configuracao versionada do Home Assistant
+  - dashboards YAML
+  - floorplan
+  - mapeamentos dos ambientes e dispositivos
+
+- `scripts/`
+  - utilitarios de startup e atualizacao de rede
+
+- `media/`
+  - arquivos locais montados no Home Assistant
 
 ## Como subir
 
-No PowerShell, dentro desta pasta:
+1. Copie [`.env.example`](C:/HomeAssistant/.env.example) para `.env.local`.
+2. Ajuste os valores locais no `.env.local`.
+3. Rode:
 
 ```powershell
 docker compose up -d
@@ -35,116 +52,100 @@ Depois abra:
 
 - `http://localhost:8123`
 
-## Como garantir que volte depois do reboot
+## Variaveis locais
 
-O `restart: unless-stopped` reinicia o container quando o Docker volta.
+Os dados sensiveis e especificos da maquina ficam em `.env.local`, por exemplo:
 
-No Windows, o ponto importante e o Docker Desktop iniciar sozinho. A forma mais simples de reforcar isso e colocar `HomeAssistantStartup.cmd` na pasta Startup do usuario.
+- IP e nome do Chromecast
+- URLs publicas do `castwall`
+- RTSP das cameras
+- intervalos de refresh
 
-Como alternativa, voce tambem pode tentar a tarefa agendada:
+O arquivo [`.env.example`](C:/HomeAssistant/.env.example) mostra o formato esperado.
 
-```powershell
-powershell -ExecutionPolicy Bypass -File .\Register-HomeAssistantStartupTaskAtLogon.ps1
-```
+## Fluxo atual
 
-Isso cria uma tarefa para executar `.\scripts\Start-HomeAssistant.ps1` no logon.
+1. O Home Assistant chama `rest_command.cast_camera_wall_start`.
+2. O `castwall` localiza o Chromecast.
+3. O `castwall` gera a pagina com floorplan + cameras.
+4. O Chromecast abre a URL servida pelo `castwall`.
+5. As cameras atualizam por snapshot rapido.
+6. O floorplan recebe estados do Home Assistant e atualiza a interface.
 
-## Fluxo recomendado para o seu caso
+## Rede
 
-### 1. Adicionar as cameras Tapo
+Este projeto precisa conviver com dois cenarios:
 
-1. Configure as cameras primeiro no app oficial Tapo.
-2. No Home Assistant, va em `Settings > Devices & services`.
-3. Adicione a integracao `Tapo`.
-4. Se a descoberta automatica falhar, faca a configuracao manual.
+- `Ethernet`
+  - usado para trabalho normal da maquina
 
-### 2. Adicionar o Chromecast
+- `Wi-Fi`
+  - usado para alcancar Chromecast e dispositivos da rede mesh
 
-1. No Home Assistant, adicione a integracao `Google Cast`.
-2. Se ele nao aparecer automaticamente, informe o IP manualmente em `Known hosts`.
+O script [Update-CastwallNetworkState.ps1](C:/HomeAssistant/scripts/Update-CastwallNetworkState.ps1) escolhe o melhor IPv4 do host e publica esse estado para o `castwall`.
 
-### 3. Ajustar o dashboard da TV
+No estado atual validado:
 
-Edite:
+- o `castwall` prefere o IP do `Wi-Fi` quando ele estiver na mesma sub-rede do Chromecast e das cameras
+- o cast funciona mesmo com o cabo ligado ao mesmo tempo
 
-- `config/ui-lovelace-cast.yaml`
+## Arquivos principais para manutencao
 
-Troque os exemplos:
-
-- `camera.camera_frente`
-- `camera.camera_garagem`
-- `camera.camera_portao`
-- `camera.camera_quintal`
-
-pelos `entity_id` reais das suas cameras.
-
-### 4. Ajustar o script que faz o cast
-
-Edite:
-
-- `config/scripts.yaml`
-
-Troque:
-
-- `media_player.seu_chromecast`
-
-pelo `entity_id` real do seu Chromecast ou da sua TV com Google Cast.
-
-## Limitacoes importantes
-
-### Windows + Docker Desktop
-
-O Home Assistant documenta Windows principalmente via maquina virtual. A instalacao em container funciona, mas no Windows a descoberta de dispositivos na rede pode ser menos confiavel do que em Linux com `network_mode: host`.
-
-Na pratica:
-
-- Tapo pode precisar de configuracao manual
-- Chromecast pode precisar de IP manual
-- algumas descobertas automaticas podem falhar
-
-### Dashboard de cameras no Chromecast
-
-O cast nativo do Home Assistant e bom para dashboards, mas pode ter limitacoes com video ao vivo de cameras.
-
-Se o objetivo for uma grade de cameras 100% ao vivo e sempre estavel na TV, a opcao mais forte costuma ser uma destas:
-
-- rodar o Home Assistant OS em VM no Windows
-- rodar o Home Assistant em um mini PC, Raspberry Pi ou Home Assistant Green
-- abrir o dashboard em um navegador e espelhar a aba para a TV
-
-## Arquivos que voce provavelmente vai editar
-
-- `config/scripts.yaml`
-- `config/ui-lovelace-cast.yaml`
-- `config/configuration.yaml`
+- [docker-compose.yml](C:/HomeAssistant/docker-compose.yml)
+- [config/configuration.yaml](C:/HomeAssistant/config/configuration.yaml)
+- [config/scripts.yaml](C:/HomeAssistant/config/scripts.yaml)
+- [config/floorplan/mapeamento.yaml](C:/HomeAssistant/config/floorplan/mapeamento.yaml)
+- [config/www/floorplan/rogaciano.svg](C:/HomeAssistant/config/www/floorplan/rogaciano.svg)
+- [config/www/floorplan/rogaciano.css](C:/HomeAssistant/config/www/floorplan/rogaciano.css)
+- [castwall/app.py](C:/HomeAssistant/castwall/app.py)
 
 ## Publicacao no GitHub
 
-Este projeto esta preparado para um repositorio privado no GitHub.
+Este repositorio foi preparado para uso privado.
 
 Entram no Git:
 
 - codigo do `castwall`
 - configuracoes versionadas do Home Assistant
-- floorplan real em `config/www/floorplan/`
-- mapeamentos, helpers, dashboards e scripts do projeto
-- documentacao da arquitetura
+- floorplan real
+- dashboards, helpers, mapeamentos e scripts do projeto
+- documentacao tecnica
 
-Ficam fora do Git por `.gitignore`:
+Ficam fora do Git:
 
 - `.env.local`
 - `config/.storage/`
 - `config/.cache/`
 - bancos e logs do Home Assistant
-- artefatos publicados do `config/www/castwall/`
+- artefatos gerados em `config/www/castwall/`
 
-Use `.env.local` para credenciais, IPs, URLs e outros dados que mudam de maquina para maquina.
+## Documentacao complementar
 
-## Proximo passo sugerido
+- [CASTWALL-ARCHITECTURE.md](C:/HomeAssistant/CASTWALL-ARCHITECTURE.md)
 
-1. Subir o container.
-2. Fazer o onboarding do Home Assistant.
-3. Integrar Tapo e Google Cast.
-4. Descobrir os `entity_id` reais.
-5. Ajustar `scripts.yaml` e `ui-lovelace-cast.yaml`.
+## Comandos uteis
 
+Subir a stack:
+
+```powershell
+docker compose up -d
+```
+
+Rebuild do `castwall`:
+
+```powershell
+docker compose up -d --build castwall
+```
+
+Atualizar o IP publicado para o Chromecast:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\Update-CastwallNetworkState.ps1
+```
+
+## Observacoes
+
+- O cast atual usa `CAST_MODE=direct`.
+- O dashboard atualiza cameras em intervalo rapido.
+- O floorplan usa estados reais do Home Assistant.
+- O projeto foi ajustado para manter o fluxo estavel no Chromecast antes de buscar refinamentos visuais.
