@@ -7,6 +7,49 @@ defaults:
   hover_action: hover-info
 functions: |
   > return {
+      roomHelpers: {
+        rua: 'input_boolean.ambiente_rua',
+        escada: 'input_boolean.ambiente_escada',
+        garagem: 'input_boolean.ambiente_garagem',
+        piscina: 'input_boolean.ambiente_piscina',
+        varanda: 'input_boolean.ambiente_varanda',
+        sala: 'input_boolean.ambiente_sala',
+        quarto_caru: 'input_boolean.ambiente_quarto_caru',
+        quarto_marcos: 'input_boolean.ambiente_quarto_marcos',
+        quarto_vroou: 'input_boolean.ambiente_quarto_vroou',
+        quarto_mamae: 'input_boolean.ambiente_quarto_mamae',
+        cozinha: 'input_boolean.ambiente_cozinha',
+        banheiro_social: 'input_boolean.ambiente_banheiro_social',
+        area: 'input_boolean.ambiente_area',
+        lavanderia: 'input_boolean.ambiente_lavanderia',
+        banheiro_mamae: 'input_boolean.ambiente_banheiro_mamae',
+        terraco: 'input_boolean.ambiente_terraco'
+      },
+      areaLights: {
+        garagem: ['switch.garagem_interruptor_1'],
+        escada: ['input_select.floorplan_estado_lampada_escada'],
+        piscina: ['switch.pisicina1_interruptor_1', 'switch.piscina2_interruptor_1', 'switch.pisicina3_interruptor_1', 'switch.pisicina4_interruptor_1'],
+        terraco: ['switch.terraco1_interruptor_1', 'light.terraco2_interruptor_1', 'switch.terraco3_interruptor_1'],
+        quarto_vroou: ['light.ventilador_do_vroou']
+      },
+      areaAlerts: {
+        garagem: ['binary_sensor.garagem_movimento'],
+        piscina: ['input_boolean.alerta_camera_varanda_pessoa'],
+        varanda: ['input_boolean.alerta_camera_varanda_pessoa'],
+        rua: ['input_boolean.alerta_camera_rua_deteccao']
+      },
+      getState: (hass, entityId) => {
+        const entity = hass && hass.states ? hass.states[entityId] : undefined;
+        return String(entity && entity.state != null ? entity.state : '').toLowerCase();
+      },
+      isUnavailableState: (state) => ['unavailable', 'unknown', 'offline', 'none', ''].includes(String(state || '').toLowerCase()),
+      isOnState: (state, entityId = '') => {
+        const normalized = String(state || '').toLowerCase();
+        if (['unavailable', 'unknown', 'offline', 'none', ''].includes(normalized)) return false;
+        const domain = String(entityId || '').split('.')[0];
+        if (domain === 'input_select') return normalized !== 'off';
+        return ['on', 'playing', 'paused', 'idle', 'cool', 'heat', 'fan_only', 'dry', 'auto', 'streaming', 'recording'].includes(normalized);
+      },
       deviceStateClass: (entity) => {
         if (!entity) return 'device-unavailable';
         const state = String(entity && entity.state != null ? entity.state : '').toLowerCase();
@@ -26,69 +69,93 @@ functions: |
         if (['off', 'standby'].includes(state)) return 'device-off';
         return 'device-off';
       },
-      roomStateClass: (entity) => {
-        if (!entity) return 'room-unavailable';
-        const state = String(entity && entity.state != null ? entity.state : '').toLowerCase();
-        if (['unavailable', 'unknown', 'offline'].includes(state)) return 'room-unavailable';
-        return state === 'on' ? 'room-helper-on' : 'room-helper-off';
+      areaStateClass: (areaId, hass) => {
+        const helperId = areaId && functions.roomHelpers ? functions.roomHelpers[areaId] : undefined;
+        const helperState = helperId ? functions.getState(hass, helperId) : '';
+        const hasAlert = ((functions.areaAlerts && functions.areaAlerts[areaId]) || []).some((entityId) => functions.getState(hass, entityId) === 'on');
+        if (hasAlert) return 'room-alert-on';
+        const hasLightOn = ((functions.areaLights && functions.areaLights[areaId]) || []).some((entityId) => functions.isOnState(functions.getState(hass, entityId), entityId));
+        if (hasLightOn) return 'room-light-on';
+        if (functions.isUnavailableState(helperState)) return 'room-unavailable';
+        return helperState === 'on' ? 'room-helper-on' : 'room-helper-off';
       },
       glareStateClass: (entity) => {
         if (!entity) return '';
         const state = String(entity && entity.state != null ? entity.state : '').toLowerCase();
         const entityId = String(entity && entity.entity_id != null ? entity.entity_id : '').toLowerCase();
-        const domain = entityId.split('.')[0];
-
-        if (['unavailable', 'unknown', 'offline', 'none'].includes(state)) return '';
-        if (domain === 'input_select') return state === 'off' ? '' : 'glare-on';
-        return ['on', 'playing', 'paused', 'idle', 'cool', 'heat', 'fan_only', 'dry', 'auto', 'streaming', 'recording'].includes(state) ? 'glare-on' : '';
+        return functions.isOnState(state, entityId) ? 'glare-on' : '';
+      },
+      motionStateClass: (entity) => {
+        if (!entity) return '';
+        const state = String(entity && entity.state != null ? entity.state : '').toLowerCase();
+        return state === 'on' ? 'motion-on' : '';
       }
     };
 rules:
   - entities:
       - input_boolean.ambiente_rua
+      - input_boolean.alerta_camera_rua_deteccao
     element: ambiente.rua
     tap_action: more-info
     state_action:
       action: call-service
       service: floorplan.class_set
       service_data: |
-        > return functions.roomStateClass(entity);
+        > return functions.areaStateClass('rua', hass);
   - entities:
       - input_boolean.ambiente_escada
+      - input_select.floorplan_estado_lampada_escada
     element: ambiente.escada
     tap_action: more-info
     state_action:
       action: call-service
       service: floorplan.class_set
       service_data: |
-        > return functions.roomStateClass(entity);
+        > return functions.areaStateClass('escada', hass);
   - entities:
       - input_boolean.ambiente_garagem
+      - switch.garagem_interruptor_1
+      - binary_sensor.garagem_movimento
     element: ambiente.garagem
     tap_action: more-info
     state_action:
       action: call-service
       service: floorplan.class_set
       service_data: |
-        > return functions.roomStateClass(entity);
+        > return functions.areaStateClass('garagem', hass);
+  - entities:
+      - binary_sensor.garagem_movimento
+    element: movimento.garagem
+    tap_action: more-info
+    state_action:
+      action: call-service
+      service: floorplan.class_set
+      service_data: |
+        > return functions.motionStateClass(entity);
   - entities:
       - input_boolean.ambiente_piscina
+      - switch.pisicina1_interruptor_1
+      - switch.piscina2_interruptor_1
+      - switch.pisicina3_interruptor_1
+      - switch.pisicina4_interruptor_1
+      - input_boolean.alerta_camera_varanda_pessoa
     element: ambiente.piscina
     tap_action: more-info
     state_action:
       action: call-service
       service: floorplan.class_set
       service_data: |
-        > return functions.roomStateClass(entity);
+        > return functions.areaStateClass('piscina', hass);
   - entities:
       - input_boolean.ambiente_varanda
+      - input_boolean.alerta_camera_varanda_pessoa
     element: ambiente.varanda
     tap_action: more-info
     state_action:
       action: call-service
       service: floorplan.class_set
       service_data: |
-        > return functions.roomStateClass(entity);
+        > return functions.areaStateClass('varanda', hass);
   - entities:
       - input_boolean.ambiente_sala
     element: ambiente.sala
@@ -97,7 +164,7 @@ rules:
       action: call-service
       service: floorplan.class_set
       service_data: |
-        > return functions.roomStateClass(entity);
+        > return functions.areaStateClass('sala', hass);
   - entities:
       - input_boolean.ambiente_quarto_caru
     element: ambiente.quarto_caru
@@ -106,7 +173,7 @@ rules:
       action: call-service
       service: floorplan.class_set
       service_data: |
-        > return functions.roomStateClass(entity);
+        > return functions.areaStateClass('quarto_caru', hass);
   - entities:
       - input_boolean.ambiente_quarto_marcos
     element: ambiente.quarto_marcos
@@ -115,16 +182,17 @@ rules:
       action: call-service
       service: floorplan.class_set
       service_data: |
-        > return functions.roomStateClass(entity);
+        > return functions.areaStateClass('quarto_marcos', hass);
   - entities:
       - input_boolean.ambiente_quarto_vroou
+      - light.ventilador_do_vroou
     element: ambiente.quarto_vroou
     tap_action: more-info
     state_action:
       action: call-service
       service: floorplan.class_set
       service_data: |
-        > return functions.roomStateClass(entity);
+        > return functions.areaStateClass('quarto_vroou', hass);
   - entities:
       - input_boolean.ambiente_quarto_mamae
     element: ambiente.quarto_mamae
@@ -133,7 +201,7 @@ rules:
       action: call-service
       service: floorplan.class_set
       service_data: |
-        > return functions.roomStateClass(entity);
+        > return functions.areaStateClass('quarto_mamae', hass);
   - entities:
       - input_boolean.ambiente_cozinha
     element: ambiente.cozinha
@@ -142,7 +210,7 @@ rules:
       action: call-service
       service: floorplan.class_set
       service_data: |
-        > return functions.roomStateClass(entity);
+        > return functions.areaStateClass('cozinha', hass);
   - entities:
       - input_boolean.ambiente_banheiro_social
     element: ambiente.banheiro_social
@@ -151,7 +219,7 @@ rules:
       action: call-service
       service: floorplan.class_set
       service_data: |
-        > return functions.roomStateClass(entity);
+        > return functions.areaStateClass('banheiro_social', hass);
   - entities:
       - input_boolean.ambiente_area
     element: ambiente.area
@@ -160,7 +228,7 @@ rules:
       action: call-service
       service: floorplan.class_set
       service_data: |
-        > return functions.roomStateClass(entity);
+        > return functions.areaStateClass('area', hass);
   - entities:
       - input_boolean.ambiente_lavanderia
     element: ambiente.lavanderia
@@ -169,7 +237,7 @@ rules:
       action: call-service
       service: floorplan.class_set
       service_data: |
-        > return functions.roomStateClass(entity);
+        > return functions.areaStateClass('lavanderia', hass);
   - entities:
       - input_boolean.ambiente_banheiro_mamae
     element: ambiente.banheiro_mamae
@@ -178,16 +246,19 @@ rules:
       action: call-service
       service: floorplan.class_set
       service_data: |
-        > return functions.roomStateClass(entity);
+        > return functions.areaStateClass('banheiro_mamae', hass);
   - entities:
       - input_boolean.ambiente_terraco
+      - switch.terraco1_interruptor_1
+      - light.terraco2_interruptor_1
+      - switch.terraco3_interruptor_1
     element: ambiente.terraco
     tap_action: more-info
     state_action:
       action: call-service
       service: floorplan.class_set
       service_data: |
-        > return functions.roomStateClass(entity);
+        > return functions.areaStateClass('terraco', hass);
   - entities:
       - camera.rua_tcp
     element: camera.rua
