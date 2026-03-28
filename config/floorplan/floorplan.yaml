@@ -31,6 +31,16 @@ functions: |
         const state = String(entity && entity.state != null ? entity.state : '').toLowerCase();
         if (['unavailable', 'unknown', 'offline'].includes(state)) return 'room-unavailable';
         return state === 'on' ? 'room-helper-on' : 'room-helper-off';
+      },
+      glareStateClass: (entity) => {
+        if (!entity) return '';
+        const state = String(entity && entity.state != null ? entity.state : '').toLowerCase();
+        const entityId = String(entity && entity.entity_id != null ? entity.entity_id : '').toLowerCase();
+        const domain = entityId.split('.')[0];
+
+        if (['unavailable', 'unknown', 'offline', 'none'].includes(state)) return '';
+        if (domain === 'input_select') return state === 'off' ? '' : 'glare-on';
+        return ['on', 'playing', 'paused', 'idle', 'cool', 'heat', 'fan_only', 'dry', 'auto', 'streaming', 'recording'].includes(state) ? 'glare-on' : '';
       }
     };
 rules:
@@ -207,6 +217,14 @@ rules:
       service_data: |
         > return functions.deviceStateClass(entity);
   - entities:
+      - switch.garagem_interruptor_1
+    element: glare.lampada.garagem
+    state_action:
+      action: call-service
+      service: floorplan.class_set
+      service_data: |
+        > return functions.glareStateClass(entity);
+  - entities:
       - input_select.floorplan_estado_lampada_escada
     element: lampada.escada
     tap_action: more-info
@@ -215,6 +233,14 @@ rules:
       service: floorplan.class_set
       service_data: |
         > return functions.deviceStateClass(entity);
+  - entities:
+      - input_select.floorplan_estado_lampada_escada
+    element: glare.lampada.escada
+    state_action:
+      action: call-service
+      service: floorplan.class_set
+      service_data: |
+        > return functions.glareStateClass(entity);
   - entities:
       - switch.pisicina1_interruptor_1
     element: lampada.piscina1
@@ -226,6 +252,14 @@ rules:
       service_data: |
         > return functions.deviceStateClass(entity);
   - entities:
+      - switch.pisicina1_interruptor_1
+    element: glare.lampada.piscina1
+    state_action:
+      action: call-service
+      service: floorplan.class_set
+      service_data: |
+        > return functions.glareStateClass(entity);
+  - entities:
       - switch.piscina2_interruptor_1
     element: lampada.piscina2
     tap_action: toggle
@@ -235,6 +269,14 @@ rules:
       service: floorplan.class_set
       service_data: |
         > return functions.deviceStateClass(entity);
+  - entities:
+      - switch.piscina2_interruptor_1
+    element: glare.lampada.piscina2
+    state_action:
+      action: call-service
+      service: floorplan.class_set
+      service_data: |
+        > return functions.glareStateClass(entity);
   - entities:
       - switch.pisicina3_interruptor_1
     element: lampada.piscina3
@@ -246,6 +288,14 @@ rules:
       service_data: |
         > return functions.deviceStateClass(entity);
   - entities:
+      - switch.pisicina3_interruptor_1
+    element: glare.lampada.piscina3
+    state_action:
+      action: call-service
+      service: floorplan.class_set
+      service_data: |
+        > return functions.glareStateClass(entity);
+  - entities:
       - switch.pisicina4_interruptor_1
     element: lampada.piscina4
     tap_action: toggle
@@ -255,6 +305,14 @@ rules:
       service: floorplan.class_set
       service_data: |
         > return functions.deviceStateClass(entity);
+  - entities:
+      - switch.pisicina4_interruptor_1
+    element: glare.lampada.piscina4
+    state_action:
+      action: call-service
+      service: floorplan.class_set
+      service_data: |
+        > return functions.glareStateClass(entity);
   - entities:
       - switch.terraco1_interruptor_1
     element: lampada.terraco1
@@ -266,6 +324,14 @@ rules:
       service_data: |
         > return functions.deviceStateClass(entity);
   - entities:
+      - switch.terraco1_interruptor_1
+    element: glare.lampada.terraco1
+    state_action:
+      action: call-service
+      service: floorplan.class_set
+      service_data: |
+        > return functions.glareStateClass(entity);
+  - entities:
       - light.terraco2_interruptor_1
     element: lampada.terraco2
     tap_action: toggle
@@ -275,6 +341,14 @@ rules:
       service: floorplan.class_set
       service_data: |
         > return functions.deviceStateClass(entity);
+  - entities:
+      - light.terraco2_interruptor_1
+    element: glare.lampada.terraco2
+    state_action:
+      action: call-service
+      service: floorplan.class_set
+      service_data: |
+        > return functions.glareStateClass(entity);
   - entities:
       - switch.terraco3_interruptor_1
     element: lampada.terraco3
@@ -286,6 +360,14 @@ rules:
       service_data: |
         > return functions.deviceStateClass(entity);
   - entities:
+      - switch.terraco3_interruptor_1
+    element: glare.lampada.terraco3
+    state_action:
+      action: call-service
+      service: floorplan.class_set
+      service_data: |
+        > return functions.glareStateClass(entity);
+  - entities:
       - light.ventilador_do_vroou
     element: lampada.quarto_vroou
     tap_action: toggle
@@ -295,6 +377,14 @@ rules:
       service: floorplan.class_set
       service_data: |
         > return functions.deviceStateClass(entity);
+  - entities:
+      - light.ventilador_do_vroou
+    element: glare.lampada.quarto_vroou
+    state_action:
+      action: call-service
+      service: floorplan.class_set
+      service_data: |
+        > return functions.glareStateClass(entity);
   - entities:
       - input_select.floorplan_estado_arcondicionado_quarto_vroou
     element: arcondicionado.quarto_vroou
