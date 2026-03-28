@@ -126,6 +126,11 @@ svg * {
   stroke: #000000 !important;
 }
 
+.device-stale {
+  fill: #d97706 !important;
+  stroke: #d97706 !important;
+}
+
 .device-unavailable {
   fill: #c62828 !important;
   stroke: #c62828 !important;

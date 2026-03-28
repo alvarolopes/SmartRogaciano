@@ -136,6 +136,30 @@ Observacao importante:
 
 O dashboard tenta manter uma conexao continua em `GET /api/floorplan/stream` para refletir mudancas de estado sem depender apenas do ciclo das cameras.
 
+## Indicadores de frescor das cameras
+
+O `castwall` agora calcula um estado derivado para cada camera com base no ultimo snapshot bem-sucedido:
+
+- `fresh`
+  - camera atualizando no ritmo esperado
+  - badge `Ao vivo` no card
+  - icone `camera.*` no floorplan fica em `device-on`
+
+- `stale`
+  - camera ainda tem ultimo snapshot conhecido, mas ja esta atrasada para o perfil atual
+  - badge `Atrasada` no card
+  - icone `camera.*` no floorplan fica em `device-stale`
+
+- `offline`
+  - camera sem snapshot recente ou sem snapshot inicial
+  - badge `Offline` no card
+  - icone `camera.*` no floorplan fica em `device-unavailable`
+
+Esses dados saem em dois lugares:
+
+- `GET /health` em `camera_status`
+- `GET /api/floorplan/state` em `cameras`
+
 Comportamento atual:
 
 - caminho preferencial: stream continuo de eventos

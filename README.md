@@ -72,6 +72,15 @@ O arquivo [`.env.example`](C:/HomeAssistant/.env.example) mostra o formato esper
 5. As cameras atualizam por snapshot rapido.
 6. O floorplan recebe estados do Home Assistant e atualiza a interface.
 
+## Indicadores de estado
+
+O dashboard agora diferencia melhor estado funcional e qualidade do dado:
+
+- dispositivos `unavailable` continuam distintos dos dispositivos realmente `off`
+- cameras mostram badge discreto de status: `Ao vivo`, `Atrasada` ou `Offline`
+- cada camera mostra tambem o ultimo frescor do snapshot, como `Atualizada ha 3s`
+- os icones `camera.*` no floorplan acompanham esse mesmo estado com classes dedicadas
+
 ## Perfis de qualidade
 
 O dashboard da TV agora tem tres perfis operacionais:
