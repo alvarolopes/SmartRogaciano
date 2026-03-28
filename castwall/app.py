@@ -60,6 +60,30 @@ DASHCAST_APP_IDS = {
     if app_id.strip()
 }
 PRIMARY_DASHCAST_APP_ID = sorted(DASHCAST_APP_IDS)[0] if DASHCAST_APP_IDS else '84912283'
+DEFAULT_QUALITY_PROFILE = os.environ.get('DEFAULT_QUALITY_PROFILE', 'near_live').strip().lower().replace('-', '_')
+QUALITY_PROFILES = {
+    'economy': {
+        'label': 'Economy',
+        'snapshot_interval': 10.0,
+        'image_refresh_seconds': 10,
+        'snapshot_width': 720,
+    },
+    'normal': {
+        'label': 'Normal',
+        'snapshot_interval': 3.0,
+        'image_refresh_seconds': 3,
+        'snapshot_width': 960,
+    },
+    'near_live': {
+        'label': 'Near Live',
+        'snapshot_interval': SNAPSHOT_INTERVAL,
+        'image_refresh_seconds': IMAGE_REFRESH_SECONDS,
+        'snapshot_width': SNAPSHOT_WIDTH,
+    },
+}
+PROFILE_RUNTIME_DIR = PUBLIC_DIR / 'runtime'
+PROFILE_STATE_PATH = PROFILE_RUNTIME_DIR / 'profile.json'
+PROFILE_RUNTIME_DIR.mkdir(parents=True, exist_ok=True)
 
 CAMERAS = {
     'rua': {
@@ -102,10 +126,15 @@ CAST_STATE = {
     'last_seen_display_name': None,
 }
 CAST_LOCK = threading.RLock()
+PROFILE_LOCK = threading.RLock()
 HA_TOKEN_LOCK = threading.Lock()
 HA_TOKEN_CACHE = {
     'access_token': None,
     'expires_at': 0.0,
+}
+PROFILE_STATE = {
+    'selected': DEFAULT_QUALITY_PROFILE if DEFAULT_QUALITY_PROFILE in QUALITY_PROFILES else 'near_live',
+    'applied_at': None,
 }
 DYNAMIC_FLOORPLAN_CLASSES = [
     'room-helper-on',
@@ -142,6 +171,127 @@ def _now_ts() -> int:
 def _update_cast_state(**updates) -> None:
     with CAST_LOCK:
         CAST_STATE.update(updates)
+
+
+def _normalize_profile_name(profile_name: str | None) -> str:
+    normalized = str(profile_name or '').strip().lower().replace('-', '_')
+    return normalized if normalized in QUALITY_PROFILES else ''
+
+
+def _persist_profile_state() -> None:
+    payload = {
+        'selected': PROFILE_STATE['selected'],
+        'applied_at': PROFILE_STATE['applied_at'],
+    }
+    PROFILE_STATE_PATH.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding='utf-8')
+
+
+def _load_profile_state() -> dict:
+    if not PROFILE_STATE_PATH.exists():
+        return {}
+
+    try:
+        payload = json.loads(PROFILE_STATE_PATH.read_text(encoding='utf-8')) or {}
+    except Exception:
+        return {}
+
+    return payload if isinstance(payload, dict) else {}
+
+
+def _current_profile_name() -> str:
+    with PROFILE_LOCK:
+        selected = _normalize_profile_name(PROFILE_STATE.get('selected'))
+        if selected:
+            return selected
+    return 'near_live'
+
+
+def _current_profile() -> dict:
+    return QUALITY_PROFILES[_current_profile_name()]
+
+
+def _current_snapshot_interval() -> float:
+    return float(_current_profile()['snapshot_interval'])
+
+
+def _current_image_refresh_seconds() -> int:
+    return int(_current_profile()['image_refresh_seconds'])
+
+
+def _current_snapshot_width() -> int:
+    return int(_current_profile()['snapshot_width'])
+
+
+def _build_profile_state_payload() -> dict:
+    selected = _current_profile_name()
+    profile = _current_profile()
+    return {
+        'selected': selected,
+        'applied_at': PROFILE_STATE.get('applied_at'),
+        'available': {
+            name: {
+                'label': config['label'],
+                'snapshot_interval': config['snapshot_interval'],
+                'image_refresh_seconds': config['image_refresh_seconds'],
+                'snapshot_width': config['snapshot_width'],
+            }
+            for name, config in QUALITY_PROFILES.items()
+        },
+        'active': {
+            'label': profile['label'],
+            'snapshot_interval': profile['snapshot_interval'],
+            'image_refresh_seconds': profile['image_refresh_seconds'],
+            'snapshot_width': profile['snapshot_width'],
+        },
+    }
+
+
+def _set_quality_profile(profile_name: str, *, recast_if_active: bool = True) -> dict:
+    normalized = _normalize_profile_name(profile_name)
+    if not normalized:
+        raise ValueError(f'Perfil invalido: {profile_name}. Perfis: {sorted(QUALITY_PROFILES)}')
+
+    recast_payload = None
+    now = _now_ts()
+    with PROFILE_LOCK:
+        PROFILE_STATE['selected'] = normalized
+        PROFILE_STATE['applied_at'] = now
+        _persist_profile_state()
+
+    _write_public_assets()
+
+    if recast_if_active and CAST_STATE.get('desired_active'):
+        with CAST_LOCK:
+            cast, attempt, cast_url = _start_dashcast()
+            CAST_STATE['active'] = True
+            CAST_STATE['desired_active'] = True
+            CAST_STATE['last_start'] = now
+            CAST_STATE['last_refresh'] = now
+            CAST_STATE['last_error'] = None
+            CAST_STATE['last_watchdog_status'] = 'profile-updated'
+            CAST_STATE['last_watchdog_reason'] = None
+            CAST_STATE['last_seen_device'] = cast.name
+            CAST_STATE['last_seen_app_id'] = PRIMARY_DASHCAST_APP_ID
+            CAST_STATE['last_seen_display_name'] = 'DashCast'
+            recast_payload = {
+                'device': cast.name,
+                'attempt': attempt,
+                'url': cast_url,
+            }
+
+    payload = _build_profile_state_payload()
+    if recast_payload:
+        payload['recast'] = recast_payload
+    return payload
+
+
+def _initialize_quality_profile_state() -> None:
+    saved_state = _load_profile_state()
+    selected = _normalize_profile_name(saved_state.get('selected')) or _normalize_profile_name(DEFAULT_QUALITY_PROFILE) or 'near_live'
+    with PROFILE_LOCK:
+        PROFILE_STATE['selected'] = selected
+        PROFILE_STATE['applied_at'] = saved_state.get('applied_at') or _now_ts()
+        _persist_profile_state()
 
 
 def _load_floorplan_map() -> dict:
@@ -582,7 +732,7 @@ def _build_dashboard_html(
 <body>
   <div class="topbar">
     Planta + Cameras
-    <span class="subtitle">Planta ao vivo | Cameras a cada {IMAGE_REFRESH_SECONDS}s</span>
+    <span class="subtitle">Planta ao vivo | Cameras a cada {_current_image_refresh_seconds()}s</span>
   </div>
   <div class="layout">
     <div class="panel">
@@ -716,7 +866,7 @@ def _build_dashboard_html(
     }}
 
     window.setTimeout(refreshImages, 900);
-    window.setInterval(refreshImages, {IMAGE_REFRESH_SECONDS * 1000});
+    window.setInterval(refreshImages, {_current_image_refresh_seconds() * 1000});
     window.setTimeout(connectFloorplanStream, 1200);
   </script>
 </body>
@@ -796,7 +946,7 @@ def _capture_snapshot(name: str, camera: dict) -> None:
         '-i',
         camera['rtsp_url'],
         '-vf',
-        f'scale={SNAPSHOT_WIDTH}:-2',
+        f'scale={_current_snapshot_width()}:-2',
         '-frames:v',
         '1',
         '-update',
@@ -826,7 +976,7 @@ def _snapshot_worker(name: str, camera: dict) -> None:
         except Exception as exc:  # noqa: BLE001
             STATE[name]['ok'] = False
             STATE[name]['last_error'] = str(exc)
-        time.sleep(SNAPSHOT_INTERVAL)
+        time.sleep(_current_snapshot_interval())
 
 
 def _get_cast() -> pychromecast.Chromecast:
@@ -1057,10 +1207,11 @@ def health() -> Response:
             'chromecast_name': CHROMECAST_NAME,
             'host_network_state_path': str(HOST_NETWORK_STATE_PATH),
             'host_network_state': host_network_state,
-            'image_refresh_seconds': IMAGE_REFRESH_SECONDS,
+            'image_refresh_seconds': _current_image_refresh_seconds(),
+            'snapshot_interval_seconds': _current_snapshot_interval(),
             'floorplan_watch_interval': FLOORPLAN_WATCH_INTERVAL,
             'floorplan_stream_heartbeat_seconds': FLOORPLAN_STREAM_HEARTBEAT_SECONDS,
-            'snapshot_width': SNAPSHOT_WIDTH,
+            'snapshot_width': _current_snapshot_width(),
             'public_dir': str(PUBLIC_DIR),
             'ha_config_dir': str(HA_CONFIG_DIR),
             'floorplan_svg_path': str(FLOORPLAN_SVG_PATH),
@@ -1073,9 +1224,29 @@ def health() -> Response:
                 'start_grace_seconds': CAST_WATCHDOG_START_GRACE_SECONDS,
                 'dashcast_app_ids': sorted(DASHCAST_APP_IDS),
             },
+            'quality_profile': _build_profile_state_payload(),
             'cast': CAST_STATE,
         }
     )
+
+
+@APP.get('/api/profile')
+def profile_state() -> Response:
+    response = make_response(jsonify({'ok': True, 'profile': _build_profile_state_payload()}))
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
+
+
+@APP.post('/api/profile/<profile_name>')
+def profile_set(profile_name: str) -> Response:
+    try:
+        payload = _set_quality_profile(profile_name)
+    except ValueError as exc:
+        return jsonify({'ok': False, 'error': str(exc)}), 400
+
+    return jsonify({'ok': True, 'profile': payload})
 
 
 @APP.get('/api/floorplan/state')
@@ -1166,6 +1337,7 @@ def cast_stop() -> Response:
     return jsonify({'ok': True, 'action': 'stop', 'device': device_name})
 
 
+_initialize_quality_profile_state()
 _write_public_assets()
 for camera_name, camera_config in CAMERAS.items():
     thread = threading.Thread(target=_snapshot_worker, args=(camera_name, camera_config), daemon=True)

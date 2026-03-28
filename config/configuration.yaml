@@ -1,4 +1,4 @@
-﻿default_config:
+default_config:
 
 homeassistant:
   name: Home Assistant Casa
@@ -39,6 +39,18 @@ rest_command:
     url: http://host.docker.internal:8090/api/cast/stop
     method: post
     timeout: 30
+  cast_camera_wall_profile_economy:
+    url: http://host.docker.internal:8090/api/profile/economy
+    method: post
+    timeout: 90
+  cast_camera_wall_profile_normal:
+    url: http://host.docker.internal:8090/api/profile/normal
+    method: post
+    timeout: 90
+  cast_camera_wall_profile_near_live:
+    url: http://host.docker.internal:8090/api/profile/near_live
+    method: post
+    timeout: 90
 
 input_boolean: !include floorplan/helpers_ambientes.yaml
 input_select: !include floorplan/helpers_dispositivos.yaml

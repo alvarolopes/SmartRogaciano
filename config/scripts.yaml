@@ -12,3 +12,54 @@ parar_cameras_na_tv:
   sequence:
     - action: rest_command.cast_camera_wall_stop
 
+aplicar_perfil_dashboard_tv:
+  alias: Aplicar perfil do dashboard TV
+  description: Aplica o perfil de qualidade selecionado para o dashboard da TV.
+  mode: restart
+  sequence:
+    - choose:
+        - conditions: "{{ is_state('input_select.castwall_perfil_dashboard_tv', 'economy') }}"
+          sequence:
+            - action: rest_command.cast_camera_wall_profile_economy
+        - conditions: "{{ is_state('input_select.castwall_perfil_dashboard_tv', 'normal') }}"
+          sequence:
+            - action: rest_command.cast_camera_wall_profile_normal
+        - conditions: "{{ is_state('input_select.castwall_perfil_dashboard_tv', 'near_live') }}"
+          sequence:
+            - action: rest_command.cast_camera_wall_profile_near_live
+
+perfil_dashboard_tv_economia:
+  alias: Dashboard TV - Perfil Economia
+  description: Seleciona o perfil economy para o dashboard da TV.
+  mode: restart
+  sequence:
+    - action: input_select.select_option
+      target:
+        entity_id: input_select.castwall_perfil_dashboard_tv
+      data:
+        option: economy
+    - action: script.aplicar_perfil_dashboard_tv
+
+perfil_dashboard_tv_normal:
+  alias: Dashboard TV - Perfil Normal
+  description: Seleciona o perfil normal para o dashboard da TV.
+  mode: restart
+  sequence:
+    - action: input_select.select_option
+      target:
+        entity_id: input_select.castwall_perfil_dashboard_tv
+      data:
+        option: normal
+    - action: script.aplicar_perfil_dashboard_tv
+
+perfil_dashboard_tv_quase_live:
+  alias: Dashboard TV - Perfil Quase Live
+  description: Seleciona o perfil near_live para o dashboard da TV.
+  mode: restart
+  sequence:
+    - action: input_select.select_option
+      target:
+        entity_id: input_select.castwall_perfil_dashboard_tv
+      data:
+        option: near_live
+    - action: script.aplicar_perfil_dashboard_tv
