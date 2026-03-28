@@ -1,0 +1,323 @@
+image: /local/floorplan/rogaciano.svg?v=20260325
+stylesheet: /local/floorplan/rogaciano.css?v=20260325
+console_log_level: warn
+log_level: warn
+defaults:
+  hover_action: hover-info
+functions: |
+  > return {
+      deviceStateClass: (entity) => {
+        if (!entity) return 'device-unavailable';
+        const state = String(entity && entity.state != null ? entity.state : '').toLowerCase();
+        const entityId = String(entity && entity.entity_id != null ? entity.entity_id : '').toLowerCase();
+        const domain = entityId.split('.')[0];
+
+        if (['unavailable', 'unknown', 'offline', 'none'].includes(state)) return 'device-unavailable';
+        if (domain === 'camera') return state === 'off' ? 'device-off' : 'device-on';
+        if (domain === 'media_player') return ['off', 'standby'].includes(state) ? 'device-off' : 'device-on';
+        if (domain === 'climate') return state === 'off' ? 'device-off' : 'device-on';
+        if (domain === 'input_select') {
+          if (state === 'unavailable') return 'device-unavailable';
+          if (state === 'off') return 'device-off';
+          return 'device-on';
+        }
+        if (['on', 'playing', 'paused', 'idle', 'cool', 'heat', 'fan_only', 'dry', 'auto', 'streaming', 'recording'].includes(state)) return 'device-on';
+        if (['off', 'standby'].includes(state)) return 'device-off';
+        return 'device-off';
+      },
+      roomStateClass: (entity) => {
+        if (!entity) return 'room-unavailable';
+        const state = String(entity && entity.state != null ? entity.state : '').toLowerCase();
+        if (['unavailable', 'unknown', 'offline'].includes(state)) return 'room-unavailable';
+        return state === 'on' ? 'room-helper-on' : 'room-helper-off';
+      }
+    };
+rules:
+  - entities:
+      - input_boolean.ambiente_rua
+    element: ambiente.rua
+    tap_action: more-info
+    state_action:
+      action: call-service
+      service: floorplan.class_set
+      service_data: |
+        > return functions.roomStateClass(entity);
+  - entities:
+      - input_boolean.ambiente_escada
+    element: ambiente.escada
+    tap_action: more-info
+    state_action:
+      action: call-service
+      service: floorplan.class_set
+      service_data: |
+        > return functions.roomStateClass(entity);
+  - entities:
+      - input_boolean.ambiente_garagem
+    element: ambiente.garagem
+    tap_action: more-info
+    state_action:
+      action: call-service
+      service: floorplan.class_set
+      service_data: |
+        > return functions.roomStateClass(entity);
+  - entities:
+      - input_boolean.ambiente_piscina
+    element: ambiente.piscina
+    tap_action: more-info
+    state_action:
+      action: call-service
+      service: floorplan.class_set
+      service_data: |
+        > return functions.roomStateClass(entity);
+  - entities:
+      - input_boolean.ambiente_varanda
+    element: ambiente.varanda
+    tap_action: more-info
+    state_action:
+      action: call-service
+      service: floorplan.class_set
+      service_data: |
+        > return functions.roomStateClass(entity);
+  - entities:
+      - input_boolean.ambiente_sala
+    element: ambiente.sala
+    tap_action: more-info
+    state_action:
+      action: call-service
+      service: floorplan.class_set
+      service_data: |
+        > return functions.roomStateClass(entity);
+  - entities:
+      - input_boolean.ambiente_quarto_caru
+    element: ambiente.quarto_caru
+    tap_action: more-info
+    state_action:
+      action: call-service
+      service: floorplan.class_set
+      service_data: |
+        > return functions.roomStateClass(entity);
+  - entities:
+      - input_boolean.ambiente_quarto_marcos
+    element: ambiente.quarto_marcos
+    tap_action: more-info
+    state_action:
+      action: call-service
+      service: floorplan.class_set
+      service_data: |
+        > return functions.roomStateClass(entity);
+  - entities:
+      - input_boolean.ambiente_quarto_vroou
+    element: ambiente.quarto_vroou
+    tap_action: more-info
+    state_action:
+      action: call-service
+      service: floorplan.class_set
+      service_data: |
+        > return functions.roomStateClass(entity);
+  - entities:
+      - input_boolean.ambiente_quarto_mamae
+    element: ambiente.quarto_mamae
+    tap_action: more-info
+    state_action:
+      action: call-service
+      service: floorplan.class_set
+      service_data: |
+        > return functions.roomStateClass(entity);
+  - entities:
+      - input_boolean.ambiente_cozinha
+    element: ambiente.cozinha
+    tap_action: more-info
+    state_action:
+      action: call-service
+      service: floorplan.class_set
+      service_data: |
+        > return functions.roomStateClass(entity);
+  - entities:
+      - input_boolean.ambiente_banheiro_social
+    element: ambiente.banheiro_social
+    tap_action: more-info
+    state_action:
+      action: call-service
+      service: floorplan.class_set
+      service_data: |
+        > return functions.roomStateClass(entity);
+  - entities:
+      - input_boolean.ambiente_area
+    element: ambiente.area
+    tap_action: more-info
+    state_action:
+      action: call-service
+      service: floorplan.class_set
+      service_data: |
+        > return functions.roomStateClass(entity);
+  - entities:
+      - input_boolean.ambiente_lavanderia
+    element: ambiente.lavanderia
+    tap_action: more-info
+    state_action:
+      action: call-service
+      service: floorplan.class_set
+      service_data: |
+        > return functions.roomStateClass(entity);
+  - entities:
+      - input_boolean.ambiente_banheiro_mamae
+    element: ambiente.banheiro_mamae
+    tap_action: more-info
+    state_action:
+      action: call-service
+      service: floorplan.class_set
+      service_data: |
+        > return functions.roomStateClass(entity);
+  - entities:
+      - input_boolean.ambiente_terraco
+    element: ambiente.terraco
+    tap_action: more-info
+    state_action:
+      action: call-service
+      service: floorplan.class_set
+      service_data: |
+        > return functions.roomStateClass(entity);
+  - entities:
+      - camera.rua_tcp
+    element: camera.rua
+    tap_action: more-info
+    state_action:
+      action: call-service
+      service: floorplan.class_set
+      service_data: |
+        > return functions.deviceStateClass(entity);
+  - entities:
+      - camera.varanda_visualizacao_ao_vivo
+    element: camera.varanda
+    tap_action: more-info
+    state_action:
+      action: call-service
+      service: floorplan.class_set
+      service_data: |
+        > return functions.deviceStateClass(entity);
+  - entities:
+      - switch.garagem_interruptor_1
+    element: lampada.garagem
+    tap_action: toggle
+    double_tap_action: more-info
+    state_action:
+      action: call-service
+      service: floorplan.class_set
+      service_data: |
+        > return functions.deviceStateClass(entity);
+  - entities:
+      - input_select.floorplan_estado_lampada_escada
+    element: lampada.escada
+    tap_action: more-info
+    state_action:
+      action: call-service
+      service: floorplan.class_set
+      service_data: |
+        > return functions.deviceStateClass(entity);
+  - entities:
+      - switch.pisicina1_interruptor_1
+    element: lampada.piscina1
+    tap_action: toggle
+    double_tap_action: more-info
+    state_action:
+      action: call-service
+      service: floorplan.class_set
+      service_data: |
+        > return functions.deviceStateClass(entity);
+  - entities:
+      - switch.piscina2_interruptor_1
+    element: lampada.piscina2
+    tap_action: toggle
+    double_tap_action: more-info
+    state_action:
+      action: call-service
+      service: floorplan.class_set
+      service_data: |
+        > return functions.deviceStateClass(entity);
+  - entities:
+      - switch.pisicina3_interruptor_1
+    element: lampada.piscina3
+    tap_action: toggle
+    double_tap_action: more-info
+    state_action:
+      action: call-service
+      service: floorplan.class_set
+      service_data: |
+        > return functions.deviceStateClass(entity);
+  - entities:
+      - switch.pisicina4_interruptor_1
+    element: lampada.piscina4
+    tap_action: toggle
+    double_tap_action: more-info
+    state_action:
+      action: call-service
+      service: floorplan.class_set
+      service_data: |
+        > return functions.deviceStateClass(entity);
+  - entities:
+      - switch.terraco1_interruptor_1
+    element: lampada.terraco1
+    tap_action: toggle
+    double_tap_action: more-info
+    state_action:
+      action: call-service
+      service: floorplan.class_set
+      service_data: |
+        > return functions.deviceStateClass(entity);
+  - entities:
+      - switch.terraco2_interruptor_1
+    element: lampada.terraco2
+    tap_action: toggle
+    double_tap_action: more-info
+    state_action:
+      action: call-service
+      service: floorplan.class_set
+      service_data: |
+        > return functions.deviceStateClass(entity);
+  - entities:
+      - switch.terraco3_interruptor_1
+    element: lampada.terraco3
+    tap_action: toggle
+    double_tap_action: more-info
+    state_action:
+      action: call-service
+      service: floorplan.class_set
+      service_data: |
+        > return functions.deviceStateClass(entity);
+  - entities:
+      - light.ventilador_do_vroou
+    element: lampada.quarto_vroou
+    tap_action: toggle
+    double_tap_action: more-info
+    state_action:
+      action: call-service
+      service: floorplan.class_set
+      service_data: |
+        > return functions.deviceStateClass(entity);
+  - entities:
+      - input_select.floorplan_estado_arcondicionado_quarto_vroou
+    element: arcondicionado.quarto_vroou
+    tap_action: more-info
+    state_action:
+      action: call-service
+      service: floorplan.class_set
+      service_data: |
+        > return functions.deviceStateClass(entity);
+  - entities:
+      - media_player.quarto_do_vroou
+    element: televisao.quarto_vroou
+    tap_action: more-info
+    state_action:
+      action: call-service
+      service: floorplan.class_set
+      service_data: |
+        > return functions.deviceStateClass(entity);
+  - entities:
+      - fan.ventilador_do_vroou
+    element: ventilador.quarto_vroou
+    tap_action: more-info
+    state_action:
+      action: call-service
+      service: floorplan.class_set
+      service_data: |
+        > return functions.deviceStateClass(entity);

@@ -1,0 +1,23 @@
+param(
+    [string]$TaskName = "HomeAssistant Docker"
+)
+
+$ErrorActionPreference = "Stop"
+
+$startScript = Join-Path $PSScriptRoot "scripts\\Start-HomeAssistant.ps1"
+$currentUser = "{0}\{1}" -f $env:USERDOMAIN, $env:USERNAME
+$arguments = '-NoProfile -ExecutionPolicy Bypass -File "' + $startScript + '"'
+
+$action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument $arguments
+$trigger = New-ScheduledTaskTrigger -AtLogOn
+$settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -StartWhenAvailable
+$principal = New-ScheduledTaskPrincipal -UserId $currentUser -LogonType Interactive -RunLevel Limited
+
+Register-ScheduledTask `
+    -TaskName $TaskName `
+    -Action $action `
+    -Trigger $trigger `
+    -Settings $settings `
+    -Principal $principal `
+    -Description "Sobe o Docker Compose do Home Assistant no logon do Windows." `
+    -Force

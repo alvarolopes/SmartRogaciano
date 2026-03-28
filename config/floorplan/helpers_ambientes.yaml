@@ -1,0 +1,81 @@
+﻿ambiente_rua:
+  name: Ambiente Rua
+  icon: mdi:road-variant
+  initial: true
+
+ambiente_escada:
+  name: Ambiente Escada
+  icon: mdi:stairs
+  initial: true
+
+ambiente_garagem:
+  name: Ambiente Garagem
+  icon: mdi:garage
+  initial: true
+
+ambiente_piscina:
+  name: Ambiente Piscina
+  icon: mdi:pool
+  initial: true
+
+ambiente_varanda:
+  name: Ambiente Varanda
+  icon: mdi:balcony
+  initial: true
+
+ambiente_sala:
+  name: Ambiente Sala
+  icon: mdi:sofa
+  initial: true
+
+ambiente_quarto_caru:
+  name: Ambiente Quarto Caru
+  icon: mdi:bed-queen-outline
+  initial: true
+
+ambiente_quarto_marcos:
+  name: Ambiente Quarto Marcos
+  icon: mdi:bed-outline
+  initial: true
+
+ambiente_quarto_vroou:
+  name: Ambiente Quarto Vroou
+  icon: mdi:bed-king-outline
+  initial: true
+
+ambiente_quarto_mamae:
+  name: Ambiente Quarto Mamae
+  icon: mdi:bed-double-outline
+  initial: true
+
+ambiente_cozinha:
+  name: Ambiente Cozinha
+  icon: mdi:stove
+  initial: true
+
+ambiente_banheiro_social:
+  name: Ambiente Banheiro Social
+  icon: mdi:shower
+  initial: true
+
+ambiente_area:
+  name: Ambiente Area
+  icon: mdi:washing-machine
+  initial: true
+
+ambiente_lavanderia:
+  name: Ambiente Lavanderia
+  icon: mdi:washing-machine
+  initial: true
+
+ambiente_banheiro_mamae:
+  name: Ambiente Banheiro Mamae
+  icon: mdi:bathtub-outline
+  initial: true
+
+ambiente_terraco:
+  name: Ambiente Terraco
+  icon: mdi:home-roof
+  initial: true
+
+

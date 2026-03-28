@@ -1,0 +1,14 @@
+mostrar_cameras_na_tv:
+  alias: Mostrar cameras na TV
+  description: Abre o dashboard de cameras no Chromecast Quarto do vroou via castwall.
+  mode: restart
+  sequence:
+    - action: rest_command.cast_camera_wall_start
+
+parar_cameras_na_tv:
+  alias: Parar cameras na TV
+  description: Fecha o dashboard de cameras no Chromecast Quarto do vroou via castwall.
+  mode: restart
+  sequence:
+    - action: rest_command.cast_camera_wall_stop
+

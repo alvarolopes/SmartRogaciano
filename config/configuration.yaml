@@ -1,0 +1,47 @@
+﻿default_config:
+
+homeassistant:
+  name: Home Assistant Casa
+  time_zone: America/Sao_Paulo
+  unit_system: metric
+  currency: BRL
+
+frontend:
+  extra_module_url:
+    - /local/floorplan/floorplan.js
+
+lovelace:
+  mode: storage
+  dashboards:
+    lovelace-cast:
+      mode: yaml
+      filename: ui-lovelace-cast.yaml
+      title: Cameras TV
+      icon: mdi:cctv
+      show_in_sidebar: true
+      require_admin: false
+    lovelace-floorplan:
+      mode: yaml
+      filename: ui-floorplan.yaml
+      title: Casa - Floorplan
+      icon: mdi:floor-plan
+      show_in_sidebar: true
+      require_admin: false
+
+stream:
+
+rest_command:
+  cast_camera_wall_start:
+    url: http://host.docker.internal:8090/api/cast/start
+    method: post
+    timeout: 60
+  cast_camera_wall_stop:
+    url: http://host.docker.internal:8090/api/cast/stop
+    method: post
+    timeout: 30
+
+input_boolean: !include floorplan/helpers_ambientes.yaml
+input_select: !include floorplan/helpers_dispositivos.yaml
+script: !include scripts.yaml
+automation: !include automations.yaml
+scene: !include scenes.yaml

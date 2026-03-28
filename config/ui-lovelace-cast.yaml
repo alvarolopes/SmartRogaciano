@@ -1,0 +1,26 @@
+title: Cameras TV
+views:
+  - title: Cameras
+    path: cameras
+    badges: []
+    cards:
+      - type: markdown
+        content: |
+          ## Cameras
+          Cameras Tapo configuradas no Home Assistant.
+      - type: grid
+        columns: 2
+        square: false
+        cards:
+          - type: picture-entity
+            entity: camera.rua_visualizacao_ao_vivo
+            name: Rua
+            show_name: true
+            show_state: false
+            camera_view: live
+          - type: picture-entity
+            entity: camera.varanda_visualizacao_ao_vivo
+            name: Varanda
+            show_name: true
+            show_state: false
+            camera_view: live

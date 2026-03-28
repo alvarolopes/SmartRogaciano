@@ -1,0 +1,41 @@
+﻿name: homeassistant
+
+services:
+  homeassistant:
+    container_name: homeassistant
+    image: ${HOME_ASSISTANT_IMAGE:-ghcr.io/home-assistant/home-assistant:stable}
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ:-America/Sao_Paulo}
+    ports:
+      - "${HA_PORT:-8123}:8123"
+    volumes:
+      - type: bind
+        source: ./config
+        target: /config
+      - type: bind
+        source: ./media
+        target: /media
+
+  castwall:
+    container_name: homeassistant-castwall
+    build:
+      context: ./castwall
+    restart: unless-stopped
+    env_file:
+      - ./.env.local
+    environment:
+      TZ: ${TZ:-America/Sao_Paulo}
+    volumes:
+      - type: bind
+        source: ./config/www/castwall
+        target: /app/public
+      - type: bind
+        source: ./config
+        target: /ha-config
+        read_only: true
+    ports:
+      - "8090:8090"
+
+
+

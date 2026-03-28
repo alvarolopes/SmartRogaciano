@@ -1,0 +1,148 @@
+﻿svg {
+  background: #f7f2e7;
+}
+
+svg * {
+  transition: fill 180ms ease, stroke 180ms ease, opacity 180ms ease;
+}
+
+[id="ambiente.rua"] {
+  fill: #aaccff !important;
+  fill-opacity: 0.96 !important;
+  stroke: #6c6353 !important;
+  stroke-width: 0.45 !important;
+}
+
+[id="ambiente.jardim"],
+[id="ambiente.escada"],
+[id="ambiente.garagem"],
+[id="ambiente.piscina"],
+[id="ambiente.varanda"],
+[id="ambiente.sala"],
+[id="ambiente.quarto_caru"],
+[id="ambiente.quarto_marcos"],
+[id="ambiente.quarto_vroou"],
+[id="ambiente.quarto_mamae"],
+[id="ambiente.cozinha"],
+[id="ambiente.banheiro_social"],
+[id="ambiente.area"],
+[id="ambiente.lavanderia"],
+[id="ambiente.banheiro_mamae"],
+[id="ambiente.terraco"] {
+  fill: #f4e2ad !important;
+  fill-opacity: 0.92 !important;
+  stroke: #6c6353 !important;
+  stroke-width: 0.45 !important;
+}
+
+[id="camera.rua"],
+[id="camera.varanda"],
+[id="lampada.garagem"],
+[id="lampada.escada"],
+[id="lampada.piscina1"],
+[id="lampada.piscina2"],
+[id="lampada.piscina3"],
+[id="lampada.piscina4"],
+[id="lampada.terraco1"],
+[id="lampada.terraco2"],
+[id="lampada.terraco3"],
+[id="lampada.quarto_vroou"],
+[id="arcondicionado.quarto_vroou"],
+[id="televisao.quarto_vroou"] {
+  fill: #000000 !important;
+  stroke: #000000 !important;
+  stroke-width: 0.55 !important;
+  cursor: pointer !important;
+}
+
+[id="ventilador.quarto_vroou"] {
+  cursor: pointer !important;
+}
+
+[id="ventilador.quarto_vroou"] path {
+  stroke: none !important;
+}
+
+.floorplan-shell:not(.floorplan-ready) [id="camera.rua"],
+.floorplan-shell:not(.floorplan-ready) [id="camera.varanda"],
+.floorplan-shell:not(.floorplan-ready) [id="lampada.garagem"],
+.floorplan-shell:not(.floorplan-ready) [id="lampada.escada"],
+.floorplan-shell:not(.floorplan-ready) [id="lampada.piscina1"],
+.floorplan-shell:not(.floorplan-ready) [id="lampada.piscina2"],
+.floorplan-shell:not(.floorplan-ready) [id="lampada.piscina3"],
+.floorplan-shell:not(.floorplan-ready) [id="lampada.piscina4"],
+.floorplan-shell:not(.floorplan-ready) [id="lampada.terraco1"],
+.floorplan-shell:not(.floorplan-ready) [id="lampada.terraco2"],
+.floorplan-shell:not(.floorplan-ready) [id="lampada.terraco3"],
+.floorplan-shell:not(.floorplan-ready) [id="lampada.quarto_vroou"],
+.floorplan-shell:not(.floorplan-ready) [id="arcondicionado.quarto_vroou"],
+.floorplan-shell:not(.floorplan-ready) [id="televisao.quarto_vroou"],
+.floorplan-shell:not(.floorplan-ready) [id="ventilador.quarto_vroou"],
+.floorplan-shell:not(.floorplan-ready) [id^="glare."] {
+  opacity: 0 !important;
+}
+
+[id^="glare."] {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+.room-helper-on {
+  fill: #f4e2ad !important;
+  fill-opacity: 0.96 !important;
+}
+
+.room-helper-off {
+  fill: #efe1be !important;
+  fill-opacity: 0.80 !important;
+}
+
+.room-light-on {
+  fill: #aaffccff !important;
+  fill-opacity: 1 !important;
+  stroke: #6c6353 !important;
+}
+
+[id="ambiente.rua"].room-helper-on,
+[id="ambiente.rua"].room-helper-off,
+[id="ambiente.rua"].room-light-on {
+  fill: #aaccff !important;
+  fill-opacity: 0.96 !important;
+  stroke: #6c6353 !important;
+}
+
+.room-unavailable {
+  fill: #f6b0ab !important;
+  stroke: #c62828 !important;
+}
+
+.device-on {
+  fill: #179b44 !important;
+  stroke: #179b44 !important;
+}
+
+.device-off {
+  fill: #000000 !important;
+  stroke: #000000 !important;
+}
+
+.device-unavailable {
+  fill: #c62828 !important;
+  stroke: #c62828 !important;
+}
+
+[id="ventilador.quarto_vroou"].device-on path {
+  fill: #179b44 !important;
+}
+
+[id="ventilador.quarto_vroou"].device-off path {
+  fill: #000000 !important;
+}
+
+[id="ventilador.quarto_vroou"].device-unavailable path {
+  fill: #c62828 !important;
+}
+
+[id^="glare."].glare-on {
+  opacity: 0.98 !important;
+}

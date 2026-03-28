@@ -1,0 +1,18 @@
+﻿floorplan_estado_lampada_escada:
+  name: Floorplan Lampada Escada
+  icon: mdi:lightbulb-question-outline
+  options:
+    - 'unavailable'
+    - 'off'
+    - 'on'
+  initial: 'unavailable'
+
+floorplan_estado_arcondicionado_quarto_vroou:
+  name: Floorplan Ar-Condicionado Quarto Vroou
+  icon: mdi:air-conditioner
+  options:
+    - 'unavailable'
+    - 'off'
+    - 'cool'
+    - 'fan_only'
+  initial: 'unavailable'
