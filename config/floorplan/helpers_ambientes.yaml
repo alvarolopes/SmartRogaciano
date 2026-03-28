@@ -82,3 +82,13 @@ auto_iniciar_dashboard_tv:
   name: Auto iniciar dashboard TV
   icon: mdi:television-play
   initial: true
+
+alerta_camera_varanda_pessoa:
+  name: Alerta Camera Varanda Pessoa
+  icon: mdi:account-alert
+  initial: false
+
+alerta_camera_rua_deteccao:
+  name: Alerta Camera Rua Deteccao
+  icon: mdi:cctv-alert
+  initial: false

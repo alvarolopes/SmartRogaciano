@@ -186,6 +186,28 @@ dispositivos:
     tap_action: more-info
     nota: Ventilador Tuya do quarto do Vroou.
 
-
-
-
+alertas:
+  garagem_movimento:
+    entity_id: binary_sensor.garagem_movimento
+    active_states:
+      - 'on'
+    element_id: movimento.garagem
+    element_class: motion-on
+    area_ids:
+      - garagem
+    nota: Mostra o marcador de movimento na garagem e pinta o ambiente de vermelho enquanto houver deteccao.
+  camera_varanda_pessoa:
+    entity_id: input_boolean.alerta_camera_varanda_pessoa
+    active_states:
+      - 'on'
+    area_ids:
+      - varanda
+      - piscina
+    nota: Helper temporario para destacar varanda e piscina quando a camera da varanda reportar pessoa detectada.
+  camera_rua_deteccao:
+    entity_id: input_boolean.alerta_camera_rua_deteccao
+    active_states:
+      - 'on'
+    area_ids:
+      - rua
+    nota: Helper temporario para destacar a rua quando a camera da rua reportar pessoa ou movimento detectado.

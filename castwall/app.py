@@ -140,6 +140,7 @@ PROFILE_STATE = {
 DYNAMIC_FLOORPLAN_CLASSES = [
     'room-helper-on',
     'room-helper-off',
+    'room-alert-on',
     'room-light-on',
     'room-unavailable',
     'device-on',
@@ -147,6 +148,7 @@ DYNAMIC_FLOORPLAN_CLASSES = [
     'device-stale',
     'device-unavailable',
     'glare-on',
+    'motion-on',
 ]
 UNAVAILABLE_STATES = {'unavailable', 'unknown', 'offline', 'none'}
 DEVICE_ON_STATES = {
@@ -298,16 +300,17 @@ def _initialize_quality_profile_state() -> None:
 
 def _load_floorplan_map() -> dict:
     if not FLOORPLAN_MAP_PATH.exists():
-        return {'ambientes': {}, 'dispositivos': {}}
+        return {'ambientes': {}, 'dispositivos': {}, 'alertas': {}}
 
     try:
         data = yaml.safe_load(FLOORPLAN_MAP_PATH.read_text(encoding='utf-8')) or {}
     except Exception:
-        return {'ambientes': {}, 'dispositivos': {}}
+        return {'ambientes': {}, 'dispositivos': {}, 'alertas': {}}
 
     return {
         'ambientes': data.get('ambientes', {}) or {},
         'dispositivos': data.get('dispositivos', {}) or {},
+        'alertas': data.get('alertas', {}) or {},
     }
 
 
@@ -319,6 +322,10 @@ FLOORPLAN_ENTITY_IDS = [
 ] + [
     config['entity_id']
     for config in FLOORPLAN_MAP['dispositivos'].values()
+    if config.get('entity_id')
+] + [
+    config['entity_id']
+    for config in FLOORPLAN_MAP['alertas'].values()
     if config.get('entity_id')
 ]
 
@@ -399,15 +406,19 @@ def _floorplan_css_text() -> str:
 
 
 
+def _normalize_state(state: str | None) -> str:
+    return str(state or '').strip().lower()
+
+
 def _room_state_class(state: str | None) -> str:
-    normalized = str(state or '').strip().lower()
+    normalized = _normalize_state(state)
     if not normalized or normalized in {'unavailable', 'unknown', 'offline'}:
         return 'room-unavailable'
     return 'room-helper-on' if normalized == 'on' else 'room-helper-off'
 
 
 def _device_state_class(entity_id: str, state: str | None) -> str:
-    normalized = str(state or '').strip().lower()
+    normalized = _normalize_state(state)
     if not normalized or normalized in UNAVAILABLE_STATES:
         return 'device-unavailable'
 
@@ -428,6 +439,21 @@ def _device_state_class(entity_id: str, state: str | None) -> str:
         return 'device-off'
     return 'device-off'
 
+
+def _normalize_active_states(values) -> set[str]:
+    normalized = {
+        _normalize_state(value)
+        for value in (values or ['on'])
+        if _normalize_state(value)
+    }
+    return normalized or {'on'}
+
+
+def _alert_is_active(state: str | None, active_states=None) -> bool:
+    normalized = _normalize_state(state)
+    if not normalized or normalized in UNAVAILABLE_STATES:
+        return False
+    return normalized in _normalize_active_states(active_states)
 
 
 def _camera_thresholds() -> tuple[int, int]:
@@ -665,6 +691,7 @@ def _build_floorplan_state_payload() -> dict:
     states = _get_latest_states(FLOORPLAN_ENTITY_IDS)
     elements = {}
     light_on_area_ids = set()
+    alert_on_area_ids = set()
     now_ts = _now_ts()
     camera_status = {
         name: _build_camera_runtime_status(name, now_ts=now_ts)
@@ -699,6 +726,28 @@ def _build_floorplan_state_payload() -> dict:
         entity_id = config.get('helper_entity_id')
         if entity_id:
             elements[element_id] = _room_state_class(states.get(entity_id))
+
+    for _alert_id, config in FLOORPLAN_MAP['alertas'].items():
+        entity_id = config.get('entity_id')
+        if not entity_id:
+            continue
+
+        if not _alert_is_active(states.get(entity_id), config.get('active_states')):
+            continue
+
+        for area_id in config.get('area_ids') or []:
+            normalized_area_id = str(area_id or '').strip()
+            if normalized_area_id:
+                alert_on_area_ids.add(normalized_area_id)
+
+        element_id = str(config.get('element_id') or '').strip()
+        if element_id:
+            elements[element_id] = str(config.get('element_class') or 'motion-on').strip() or 'motion-on'
+
+    for element_id, config in FLOORPLAN_MAP['ambientes'].items():
+        area_id = str(config.get('area_id') or '').strip()
+        if area_id and area_id in alert_on_area_ids:
+            elements[element_id] = 'room-alert-on'
 
     return {
         'ok': True,

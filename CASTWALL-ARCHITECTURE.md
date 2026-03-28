@@ -166,6 +166,33 @@ Comportamento atual:
 - fallback automatico: consulta rapida de estado quando o navegador do Chromecast nao sustenta o stream
 - cameras continuam em refresh proprio conforme o perfil ativo
 
+## Alertas de movimento e deteccao
+
+O floorplan suporta um pipeline de alertas separado do estado normal dos ambientes:
+
+- `room-alert-on`
+  - pinta ambientes em `#e9afafff`
+  - tem precedencia visual sobre `room-light-on`
+
+- `motion-on`
+  - revela elementos de alerta que devem ficar escondidos por padrao, como `movimento.garagem`
+
+O mapeamento desses alertas mora em `config/floorplan/mapeamento.yaml`, na secao `alertas`.
+
+Estado atual:
+
+- `binary_sensor.garagem_movimento`
+  - mostra `movimento.garagem`
+  - pinta `ambiente.garagem`
+
+- `input_boolean.alerta_camera_varanda_pessoa`
+  - helper temporario para pintar `ambiente.varanda` e `ambiente.piscina`
+
+- `input_boolean.alerta_camera_rua_deteccao`
+  - helper temporario para pintar `ambiente.rua`
+
+Os dois helpers das cameras existem porque, hoje, o HA nao expoe entidades ou device triggers vivos de pessoa detectada / movimento detectado para as Tapo `rua` e `varanda`. Quando esse source real existir, basta apontar o `entity_id` correspondente no mapa de alertas.
+
 ## Controle de perfis pelo Home Assistant
 
 O Home Assistant expoe tres `rest_command` para troca de perfil:

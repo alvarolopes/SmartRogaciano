@@ -118,6 +118,17 @@ O helper `input_boolean.auto_iniciar_dashboard_tv` controla se o Home Assistant 
 
 Quando esse helper esta ligado, a automacao `TV - Auto iniciar dashboard das cameras` espera alguns segundos para o Chromecast estabilizar antes de chamar `script.mostrar_cameras_na_tv`. O castwall watchdog continua responsavel apenas por manter uma sessao ja iniciada.
 
+## Alertas no floorplan
+
+O floorplan agora suporta alertas vermelhos por area com a classe `room-alert-on`.
+
+No estado atual:
+
+- `binary_sensor.garagem_movimento` controla `movimento.garagem` e o destaque vermelho da garagem
+- `input_boolean.alerta_camera_varanda_pessoa` e `input_boolean.alerta_camera_rua_deteccao` funcionam como pontos de integracao temporarios para alertas das Tapo
+
+Isso existe porque o Home Assistant atual nao expoe uma entidade viva de pessoa detectada ou movimento detectado para as cameras `rua` e `varanda`; hoje so aparecem entidades de configuracao da deteccao.
+
 ## Rede
 
 Este projeto precisa conviver com dois cenarios:

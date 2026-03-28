@@ -87,6 +87,11 @@ svg * {
   pointer-events: none !important;
 }
 
+[id="movimento.garagem"] {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
 .room-helper-on {
   fill: #f4e2ad !important;
   fill-opacity: 0.96 !important;
@@ -101,6 +106,12 @@ svg * {
   fill: #aaffccff !important;
   fill-opacity: 1 !important;
   stroke: #6c6353 !important;
+}
+
+.room-alert-on {
+  fill: #e9afafff !important;
+  fill-opacity: 1 !important;
+  stroke: #c62828 !important;
 }
 
 [id="ambiente.rua"].room-helper-on,
@@ -149,5 +160,9 @@ svg * {
 }
 
 [id^="glare."].glare-on {
+  opacity: 0.98 !important;
+}
+
+[id="movimento.garagem"].motion-on {
   opacity: 0.98 !important;
 }
