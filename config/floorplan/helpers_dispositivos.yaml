@@ -1,4 +1,4 @@
-﻿floorplan_estado_lampada_escada:
+floorplan_estado_lampada_escada:
   name: Floorplan Lampada Escada
   icon: mdi:lightbulb-question-outline
   options:
@@ -16,3 +16,12 @@ floorplan_estado_arcondicionado_quarto_vroou:
     - 'cool'
     - 'fan_only'
   initial: 'unavailable'
+
+castwall_perfil_dashboard_tv:
+  name: Castwall Perfil Dashboard TV
+  icon: mdi:tune-variant
+  options:
+    - 'economy'
+    - 'normal'
+    - 'near_live'
+  initial: 'near_live'

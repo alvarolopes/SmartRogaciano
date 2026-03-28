@@ -72,6 +72,37 @@ O arquivo [`.env.example`](C:/HomeAssistant/.env.example) mostra o formato esper
 5. As cameras atualizam por snapshot rapido.
 6. O floorplan recebe estados do Home Assistant e atualiza a interface.
 
+## Perfis de qualidade
+
+O dashboard da TV agora tem tres perfis operacionais:
+
+- `economy`
+  - snapshots a cada `10s`
+  - refresh visual a cada `10s`
+  - largura de snapshot `720`
+
+- `normal`
+  - snapshots a cada `3s`
+  - refresh visual a cada `3s`
+  - largura de snapshot `960`
+
+- `near_live`
+  - snapshots a cada `1s`
+  - refresh visual a cada `1s`
+  - largura de snapshot `960`
+
+O perfil padrao de boot pode ser definido por:
+
+- `DEFAULT_QUALITY_PROFILE`
+
+No dia a dia, a troca de perfil deve ser feita sem editar `.env.local`, usando:
+
+- `script.perfil_dashboard_tv_economia`
+- `script.perfil_dashboard_tv_normal`
+- `script.perfil_dashboard_tv_quase_live`
+
+O `castwall` persiste o ultimo perfil aplicado e recasta o dashboard automaticamente quando a TV ja estiver ativa.
+
 ## Rede
 
 Este projeto precisa conviver com dois cenarios:
@@ -155,6 +186,18 @@ Atualizar o IP publicado para o Chromecast:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\Update-CastwallNetworkState.ps1
+```
+
+Consultar o perfil atual do `castwall`:
+
+```powershell
+Invoke-RestMethod -Uri http://127.0.0.1:8090/api/profile
+```
+
+Trocar o perfil por API local:
+
+```powershell
+Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8090/api/profile/normal
 ```
 
 ## Observacoes

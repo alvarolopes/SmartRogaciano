@@ -55,12 +55,34 @@ Variaveis de ajuste:
 
 ## Frequencia atual
 
-No estado atual:
+O `castwall` agora suporta perfis de qualidade em runtime.
 
-- `SNAPSHOT_INTERVAL: 1`
-- `IMAGE_REFRESH_SECONDS: 1`
+Perfis disponiveis:
 
-Ou seja, as imagens das cameras sao recapturadas e publicadas a cada 1 segundo.
+- `economy`
+  - `snapshot_interval: 10`
+  - `image_refresh_seconds: 10`
+  - `snapshot_width: 720`
+
+- `normal`
+  - `snapshot_interval: 3`
+  - `image_refresh_seconds: 3`
+  - `snapshot_width: 960`
+
+- `near_live`
+  - `snapshot_interval: 1`
+  - `image_refresh_seconds: 1`
+  - `snapshot_width: 960`
+
+O perfil inicial do processo continua vindo de:
+
+- `DEFAULT_QUALITY_PROFILE`
+
+Depois do boot, o perfil ativo fica persistido em:
+
+- `config/www/castwall/runtime/profile.json`
+
+Isso permite trocar o comportamento do dashboard sem rebuild nem edicao manual de ambiente.
 
 ## Arquivos principais
 
@@ -118,7 +140,32 @@ Comportamento atual:
 
 - caminho preferencial: stream continuo de eventos
 - fallback automatico: consulta rapida de estado quando o navegador do Chromecast nao sustenta o stream
-- cameras continuam em refresh proprio de `1s`
+- cameras continuam em refresh proprio conforme o perfil ativo
+
+## Controle de perfis pelo Home Assistant
+
+O Home Assistant expoe tres `rest_command` para troca de perfil:
+
+- `rest_command.cast_camera_wall_profile_economy`
+- `rest_command.cast_camera_wall_profile_normal`
+- `rest_command.cast_camera_wall_profile_near_live`
+
+Tambem existe um helper de selecao:
+
+- `input_select.castwall_perfil_dashboard_tv`
+
+E os scripts de uso diario:
+
+- `script.perfil_dashboard_tv_economia`
+- `script.perfil_dashboard_tv_normal`
+- `script.perfil_dashboard_tv_quase_live`
+
+O fluxo esperado e:
+
+1. selecionar o perfil desejado no helper ou por script
+2. chamar o `rest_command` correspondente
+3. o `castwall` persistir o perfil
+4. se o cast estiver ativo, recastar a pagina automaticamente
 
 ## Runtime de rede do host
 
@@ -172,8 +219,7 @@ No estado atual:
 
 - `CAST_MODE: direct`
 - `PUBLIC_URL: http://192.168.5.191:8090/`
-- `SNAPSHOT_INTERVAL: 1`
-- `IMAGE_REFRESH_SECONDS: 1`
+- perfis `economy`, `normal` e `near_live` funcionando
 - floorplan ativo no dashboard
 - layout com planta na esquerda e cameras na direita
 - cast funcionando no `Quarto do vroou`
@@ -198,6 +244,18 @@ Rebuild do `castwall`:
 
 ```powershell
 docker compose up -d --build castwall
+```
+
+Consultar o perfil atual:
+
+```powershell
+Invoke-RestMethod -Uri http://127.0.0.1:8090/api/profile
+```
+
+Trocar o perfil atual:
+
+```powershell
+Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8090/api/profile/economy
 ```
 
 Atualizar o estado de rede sem reiniciar tudo:
