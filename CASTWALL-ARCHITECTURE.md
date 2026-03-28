@@ -34,6 +34,25 @@ O fluxo principal validado usa:
 
 Nesse modo, o Chromecast abre a pagina do `castwall` diretamente na porta `8090`.
 
+## Watchdog de cast
+
+O castwall mantem um watchdog interno para a sessao do Chromecast.
+
+Comportamento atual:
+
+- so tenta recuperar a sessao quando o cast continua desejado
+- detecta quando o Chromecast sai do DashCast e volta para Backdrop ou outro app
+- tenta relancar o DashCast automaticamente apos perda de sessao
+- respeita stop manual, ou seja, nao religa sozinho quando o usuario mandar parar
+
+Variaveis de ajuste:
+
+- `CAST_WATCHDOG_ENABLED`
+- `CAST_WATCHDOG_INTERVAL`
+- `CAST_WATCHDOG_RECOVERY_COOLDOWN`
+- `CAST_WATCHDOG_START_GRACE_SECONDS`
+- `DASHCAST_APP_IDS`
+
 ## Frequencia atual
 
 No estado atual:

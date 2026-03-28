@@ -1,5 +1,6 @@
-﻿import base64
+import base64
 import json
+import logging
 import os
 import sqlite3
 import subprocess
@@ -16,6 +17,8 @@ from pychromecast.controllers.dashcast import DashCastController
 import yaml
 
 APP = Flask(__name__)
+LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO').strip().upper()
+logging.basicConfig(level=getattr(logging, LOG_LEVEL, logging.INFO))
 CACHE_DIR = Path('/app/cache')
 PUBLIC_DIR = Path(os.environ.get('PUBLIC_DIR', '/app/public'))
 HA_CONFIG_DIR = Path(os.environ.get('HA_CONFIG_DIR', '/ha-config'))
@@ -47,6 +50,16 @@ CAST_START_RETRY_SECONDS = float(os.environ.get('CAST_START_RETRY_SECONDS', '4')
 CAST_READY_DELAY_SECONDS = float(os.environ.get('CAST_READY_DELAY_SECONDS', '2'))
 SNAPSHOT_BASE_URL = os.environ.get('SNAPSHOT_BASE_URL', '').strip().rstrip('/')
 HOME_ASSISTANT_URL = os.environ.get('HOME_ASSISTANT_URL', 'http://homeassistant:8123').strip().rstrip('/')
+CAST_WATCHDOG_ENABLED = os.environ.get('CAST_WATCHDOG_ENABLED', '1').strip().lower() not in {'0', 'false', 'no', 'off'}
+CAST_WATCHDOG_INTERVAL = float(os.environ.get('CAST_WATCHDOG_INTERVAL', '20'))
+CAST_WATCHDOG_RECOVERY_COOLDOWN = float(os.environ.get('CAST_WATCHDOG_RECOVERY_COOLDOWN', '30'))
+CAST_WATCHDOG_START_GRACE_SECONDS = float(os.environ.get('CAST_WATCHDOG_START_GRACE_SECONDS', '20'))
+DASHCAST_APP_IDS = {
+    app_id.strip()
+    for app_id in os.environ.get('DASHCAST_APP_IDS', '84912283').split(',')
+    if app_id.strip()
+}
+PRIMARY_DASHCAST_APP_ID = sorted(DASHCAST_APP_IDS)[0] if DASHCAST_APP_IDS else '84912283'
 
 CAMERAS = {
     'rua': {
@@ -73,11 +86,22 @@ STATE = {
 }
 CAST_STATE = {
     'active': False,
+    'desired_active': False,
     'last_start': None,
     'last_refresh': None,
     'last_error': None,
+    'last_watchdog_check': None,
+    'last_watchdog_status': 'idle',
+    'last_watchdog_reason': None,
+    'last_recovery_attempt': None,
+    'last_recovery_success': None,
+    'recovery_count': 0,
+    'recovery_failures': 0,
+    'last_seen_device': None,
+    'last_seen_app_id': None,
+    'last_seen_display_name': None,
 }
-CAST_LOCK = threading.Lock()
+CAST_LOCK = threading.RLock()
 HA_TOKEN_LOCK = threading.Lock()
 HA_TOKEN_CACHE = {
     'access_token': None,
@@ -109,6 +133,15 @@ DEVICE_ON_STATES = {
     'true',
 }
 DEVICE_OFF_STATES = {'off', 'standby', 'false'}
+
+
+def _now_ts() -> int:
+    return int(time.time())
+
+
+def _update_cast_state(**updates) -> None:
+    with CAST_LOCK:
+        CAST_STATE.update(updates)
 
 
 def _load_floorplan_map() -> dict:
@@ -858,6 +891,145 @@ def _start_dashcast(*, quit_on_failure: bool = True) -> tuple[pychromecast.Chrom
     )
 
 
+def _cast_status_value(status: object, field: str) -> str:
+    return str(getattr(status, field, '') or '').strip()
+
+
+def _inspect_cast_session(cast: pychromecast.Chromecast) -> dict:
+    status = cast.status
+    app_id = _cast_status_value(status, 'app_id')
+    display_name = _cast_status_value(status, 'display_name')
+    return {
+        'device': cast.name,
+        'app_id': app_id,
+        'display_name': display_name,
+        'session_id': _cast_status_value(status, 'session_id'),
+        'is_dashcast': app_id in DASHCAST_APP_IDS or display_name.casefold() == 'dashcast',
+    }
+
+
+def _attempt_watchdog_recovery(reason: str) -> None:
+    now = _now_ts()
+    with CAST_LOCK:
+        if not CAST_STATE['desired_active']:
+            return
+
+        last_recovery_attempt = CAST_STATE.get('last_recovery_attempt')
+        if last_recovery_attempt and now - int(last_recovery_attempt) < CAST_WATCHDOG_RECOVERY_COOLDOWN:
+            CAST_STATE['last_watchdog_status'] = 'cooldown'
+            CAST_STATE['last_watchdog_reason'] = reason
+            return
+
+        CAST_STATE['last_recovery_attempt'] = now
+        CAST_STATE['last_watchdog_status'] = 'recovering'
+        CAST_STATE['last_watchdog_reason'] = reason
+        APP.logger.warning('Watchdog tentando recuperar o cast: %s', reason)
+
+        try:
+            cast, attempt, _ = _start_dashcast()
+            session = _inspect_cast_session(cast)
+        except Exception as exc:  # noqa: BLE001
+            CAST_STATE['active'] = False
+            CAST_STATE['last_error'] = f'{reason}; recovery failed: {exc}'
+            CAST_STATE['last_watchdog_status'] = 'recovery-failed'
+            CAST_STATE['recovery_failures'] = int(CAST_STATE.get('recovery_failures') or 0) + 1
+            APP.logger.error('Watchdog falhou ao recuperar o cast: %s', CAST_STATE['last_error'])
+            return
+
+        CAST_STATE['active'] = True
+        CAST_STATE['last_start'] = now
+        CAST_STATE['last_refresh'] = now
+        CAST_STATE['last_error'] = None
+        CAST_STATE['last_watchdog_status'] = 'recovered'
+        CAST_STATE['last_watchdog_reason'] = reason
+        CAST_STATE['last_recovery_success'] = now
+        CAST_STATE['last_watchdog_check'] = now
+        CAST_STATE['recovery_count'] = int(CAST_STATE.get('recovery_count') or 0) + 1
+        CAST_STATE['last_seen_device'] = session['device']
+        CAST_STATE['last_seen_app_id'] = PRIMARY_DASHCAST_APP_ID
+        CAST_STATE['last_seen_display_name'] = 'DashCast'
+
+    APP.logger.warning(
+        'Watchdog recuperou o cast no dispositivo %s apos %s tentativas internas do DashCast.',
+        cast.name,
+        attempt,
+    )
+
+
+def _cast_watchdog_worker() -> None:
+    APP.logger.warning(
+        'Cast watchdog habilitado. Intervalo=%ss cooldown=%ss grace=%ss',
+        CAST_WATCHDOG_INTERVAL,
+        CAST_WATCHDOG_RECOVERY_COOLDOWN,
+        CAST_WATCHDOG_START_GRACE_SECONDS,
+    )
+
+    while True:
+        time.sleep(CAST_WATCHDOG_INTERVAL)
+        now = _now_ts()
+
+        if not CAST_STATE.get('desired_active'):
+            _update_cast_state(
+                last_watchdog_check=now,
+                last_watchdog_status='idle',
+                last_watchdog_reason=None,
+            )
+            continue
+
+        last_start = CAST_STATE.get('last_start')
+        if last_start and now - int(last_start) < CAST_WATCHDOG_START_GRACE_SECONDS:
+            _update_cast_state(
+                last_watchdog_check=now,
+                last_watchdog_status='start-grace',
+                last_watchdog_reason=None,
+            )
+            continue
+
+        try:
+            cast = _get_cast()
+            session = _inspect_cast_session(cast)
+        except Exception as exc:  # noqa: BLE001
+            reason = f'watchdog nao conseguiu consultar o Chromecast: {exc}'
+            _update_cast_state(
+                active=False,
+                last_error=reason,
+                last_watchdog_check=now,
+                last_watchdog_status='chromecast-unreachable',
+                last_watchdog_reason=reason,
+            )
+            APP.logger.error(reason)
+            _attempt_watchdog_recovery(reason)
+            continue
+
+        _update_cast_state(
+            last_watchdog_check=now,
+            last_seen_device=session['device'],
+            last_seen_app_id=session['app_id'],
+            last_seen_display_name=session['display_name'],
+        )
+
+        if session['is_dashcast']:
+            _update_cast_state(
+                active=True,
+                last_refresh=now,
+                last_error=None,
+                last_watchdog_status='ok',
+                last_watchdog_reason=None,
+            )
+            continue
+
+        app_label = session['display_name'] or session['app_id'] or 'desconhecido'
+        reason = f'watchdog detectou sessao inesperada no Chromecast: {app_label}'
+        _update_cast_state(
+            active=False,
+            last_error=reason,
+            last_watchdog_status='session-lost',
+            last_watchdog_reason=reason,
+        )
+        APP.logger.warning(reason)
+        _attempt_watchdog_recovery(reason)
+
+
 @APP.get('/')
 def index() -> Response:
     response = make_response(_build_html('/snapshots', floorplan_api_url='/api/floorplan/state'))
@@ -894,6 +1066,13 @@ def health() -> Response:
             'floorplan_svg_path': str(FLOORPLAN_SVG_PATH),
             'floorplan_map_path': str(FLOORPLAN_MAP_PATH),
             'floorplan_element_count': len(FLOORPLAN_MAP['ambientes']) + len(FLOORPLAN_MAP['dispositivos']),
+            'cast_watchdog': {
+                'enabled': CAST_WATCHDOG_ENABLED,
+                'interval_seconds': CAST_WATCHDOG_INTERVAL,
+                'recovery_cooldown_seconds': CAST_WATCHDOG_RECOVERY_COOLDOWN,
+                'start_grace_seconds': CAST_WATCHDOG_START_GRACE_SECONDS,
+                'dashcast_app_ids': sorted(DASHCAST_APP_IDS),
+            },
             'cast': CAST_STATE,
         }
     )
@@ -939,10 +1118,17 @@ def snapshot(camera_name: str):
 def cast_start() -> Response:
     with CAST_LOCK:
         cast, attempt, cast_url = _start_dashcast()
+        session = _inspect_cast_session(cast)
         CAST_STATE['active'] = True
-        CAST_STATE['last_start'] = int(time.time())
+        CAST_STATE['desired_active'] = True
+        CAST_STATE['last_start'] = _now_ts()
         CAST_STATE['last_refresh'] = CAST_STATE['last_start']
         CAST_STATE['last_error'] = None
+        CAST_STATE['last_watchdog_status'] = 'started'
+        CAST_STATE['last_watchdog_reason'] = None
+        CAST_STATE['last_seen_device'] = session['device']
+        CAST_STATE['last_seen_app_id'] = PRIMARY_DASHCAST_APP_ID
+        CAST_STATE['last_seen_display_name'] = 'DashCast'
 
     return jsonify(
         {
@@ -960,17 +1146,34 @@ def cast_start() -> Response:
 @APP.post('/api/cast/stop')
 def cast_stop() -> Response:
     with CAST_LOCK:
-        cast = _get_cast()
-        cast.quit_app()
+        CAST_STATE['desired_active'] = False
         CAST_STATE['active'] = False
+        CAST_STATE['last_watchdog_status'] = 'stopped'
+        CAST_STATE['last_watchdog_reason'] = None
+        CAST_STATE['last_error'] = None
+        device_name = CHROMECAST_NAME or 'chromecast'
 
-    return jsonify({'ok': True, 'action': 'stop', 'device': cast.name})
+        try:
+            cast = _get_cast()
+            cast.quit_app()
+            device_name = cast.name
+        except Exception as exc:  # noqa: BLE001
+            warning = f'cast parado localmente, mas nao foi possivel encerrar app remoto: {exc}'
+            CAST_STATE['last_error'] = warning
+            APP.logger.warning(warning)
+            return jsonify({'ok': True, 'action': 'stop', 'device': device_name, 'details': warning})
+
+    return jsonify({'ok': True, 'action': 'stop', 'device': device_name})
 
 
 _write_public_assets()
 for camera_name, camera_config in CAMERAS.items():
     thread = threading.Thread(target=_snapshot_worker, args=(camera_name, camera_config), daemon=True)
     thread.start()
+
+if CAST_WATCHDOG_ENABLED:
+    watchdog_thread = threading.Thread(target=_cast_watchdog_worker, name='cast-watchdog', daemon=True)
+    watchdog_thread.start()
 
 
 if __name__ == '__main__':

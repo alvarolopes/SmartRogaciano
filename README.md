@@ -148,4 +148,5 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\Update-CastwallNet
 - O cast atual usa `CAST_MODE=direct`.
 - O dashboard atualiza cameras em intervalo rapido.
 - O floorplan usa estados reais do Home Assistant.
+- O castwall monitora a sessao e tenta recuperar o DashCast automaticamente quando a TV cai para Backdrop ou perde o app.
 - O projeto foi ajustado para manter o fluxo estavel no Chromecast antes de buscar refinamentos visuais.
