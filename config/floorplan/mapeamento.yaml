@@ -138,13 +138,13 @@ dispositivos:
     tap_action: toggle
     nota: Modulo Tuya terraco 1.
   'lampada.terraco2':
-    entity_id: switch.terraco2_interruptor_1
-    domain: switch
+    entity_id: light.terraco2_interruptor_1
+    domain: light
     visual_type: light
     area_id: terraco
-    source: tuya
+    source: switch_as_x
     tap_action: toggle
-    nota: Modulo Tuya terraco 2.
+    nota: Entidade de luz visivel do Terraco 2; o switch bruto atual fica oculto no HA.
   'lampada.terraco3':
     entity_id: switch.terraco3_interruptor_1
     domain: switch
