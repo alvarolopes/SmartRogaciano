@@ -1,6 +1,7 @@
 import base64
 import json
 import logging
+import math
 import os
 import sqlite3
 import subprocess
@@ -143,6 +144,7 @@ DYNAMIC_FLOORPLAN_CLASSES = [
     'room-unavailable',
     'device-on',
     'device-off',
+    'device-stale',
     'device-unavailable',
     'glare-on',
 ]
@@ -428,6 +430,81 @@ def _device_state_class(entity_id: str, state: str | None) -> str:
 
 
 
+def _camera_thresholds() -> tuple[int, int]:
+    expected_seconds = max(_current_snapshot_interval(), float(_current_image_refresh_seconds()), 1.0)
+    stale_after = max(4, int(math.ceil(expected_seconds * 2.5)))
+    offline_after = max(12, int(math.ceil(expected_seconds * 6.0)))
+    if offline_after <= stale_after:
+        offline_after = stale_after + 4
+    return stale_after, offline_after
+
+
+def _format_age_label(age_seconds: int | None) -> str:
+    if age_seconds is None:
+        return 'sem snapshot'
+    if age_seconds <= 1:
+        return 'agora'
+    if age_seconds < 60:
+        return f'ha {age_seconds}s'
+    if age_seconds < 3600:
+        minutes = max(1, int(round(age_seconds / 60)))
+        return f'ha {minutes}min'
+
+    hours = max(1, int(round(age_seconds / 3600)))
+    return f'ha {hours}h'
+
+
+def _build_camera_runtime_status(camera_name: str, *, now_ts: int | None = None) -> dict:
+    now_ts = now_ts or _now_ts()
+    state = STATE.get(camera_name, {})
+    last_success = state.get('last_success')
+    age_seconds = None if last_success is None else max(0, int(now_ts - int(last_success)))
+    stale_after, offline_after = _camera_thresholds()
+
+    if last_success is None or (age_seconds is not None and age_seconds >= offline_after):
+        status = 'offline'
+    elif not state.get('ok') or (age_seconds is not None and age_seconds >= stale_after):
+        status = 'stale'
+    else:
+        status = 'fresh'
+
+    status_labels = {
+        'fresh': 'Ao vivo',
+        'stale': 'Atrasada',
+        'offline': 'Offline',
+    }
+    floorplan_classes = {
+        'fresh': 'device-on',
+        'stale': 'device-stale',
+        'offline': 'device-unavailable',
+    }
+    detail_prefix = {
+        'fresh': 'Atualizada',
+        'stale': 'Ultimo snapshot',
+        'offline': 'Ultimo snapshot',
+    }
+
+    return {
+        'name': camera_name,
+        'label': CAMERAS.get(camera_name, {}).get('label', camera_name.title()),
+        'ok': bool(state.get('ok')),
+        'last_success': last_success,
+        'last_error': state.get('last_error'),
+        'age_seconds': age_seconds,
+        'stale_after_seconds': stale_after,
+        'offline_after_seconds': offline_after,
+        'status': status,
+        'status_label': status_labels[status],
+        'status_class': f'camera-{status}',
+        'floorplan_class': floorplan_classes[status],
+        'detail': (
+            'Aguardando primeiro snapshot'
+            if last_success is None
+            else f"{detail_prefix[status]} {_format_age_label(age_seconds)}"
+        ),
+    }
+
+
 def _load_auth_storage() -> dict:
     if not HA_AUTH_PATH.exists():
         return {}
@@ -588,13 +665,22 @@ def _build_floorplan_state_payload() -> dict:
     states = _get_latest_states(FLOORPLAN_ENTITY_IDS)
     elements = {}
     light_on_area_ids = set()
+    now_ts = _now_ts()
+    camera_status = {
+        name: _build_camera_runtime_status(name, now_ts=now_ts)
+        for name in CAMERAS
+    }
 
     for element_id, config in FLOORPLAN_MAP['dispositivos'].items():
         entity_id = config.get('entity_id')
         if not entity_id:
             continue
 
-        device_class = _device_state_class(entity_id, states.get(entity_id))
+        element_domain, _, element_name = element_id.partition('.')
+        if element_domain == 'camera' and element_name in camera_status:
+            device_class = camera_status[element_name]['floorplan_class']
+        else:
+            device_class = _device_state_class(entity_id, states.get(entity_id))
         elements[element_id] = device_class
         area_id = str(config.get('area_id') or '').strip()
         visual_type = str(config.get('visual_type') or '').strip().lower()
@@ -617,7 +703,8 @@ def _build_floorplan_state_payload() -> dict:
     return {
         'ok': True,
         'elements': elements,
-        'updated_at': int(time.time()),
+        'cameras': camera_status,
+        'updated_at': now_ts,
     }
 
 def _build_dashboard_html(
@@ -677,9 +764,58 @@ def _build_dashboard_html(
       overflow: hidden;
     }}
     .panel-title {{
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
       padding: 10px 12px;
       font-size: 22px;
       background: #162635;
+    }}
+    .panel-title-text {{
+      min-width: 0;
+    }}
+    .camera-panel {{
+      transition: border-color 180ms ease, box-shadow 180ms ease;
+    }}
+    .camera-panel.camera-fresh {{
+      border-color: #1f7a44;
+    }}
+    .camera-panel.camera-stale {{
+      border-color: #9a6200;
+    }}
+    .camera-panel.camera-offline {{
+      border-color: #8d1f1f;
+    }}
+    .camera-status-badge {{
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 104px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+      background: rgba(255, 255, 255, 0.12);
+      color: #d6e2ea;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+    }}
+    .camera-status-badge.camera-fresh {{
+      background: rgba(23, 155, 68, 0.18);
+      color: #8bf0af;
+      border-color: rgba(53, 189, 101, 0.45);
+    }}
+    .camera-status-badge.camera-stale {{
+      background: rgba(255, 152, 0, 0.16);
+      color: #ffd180;
+      border-color: rgba(255, 183, 77, 0.45);
+    }}
+    .camera-status-badge.camera-offline {{
+      background: rgba(198, 40, 40, 0.16);
+      color: #ffb3b3;
+      border-color: rgba(239, 83, 80, 0.45);
     }}
     .panel-body {{
       flex: 1;
@@ -719,6 +855,54 @@ def _build_dashboard_html(
       object-fit: contain;
       background: #000;
     }}
+    .camera-frame {{
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }}
+    .camera-overlay {{
+      position: absolute;
+      left: 10px;
+      right: 10px;
+      bottom: 10px;
+      display: flex;
+      justify-content: flex-start;
+      pointer-events: none;
+    }}
+    .camera-freshness {{
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      max-width: 100%;
+      padding: 7px 10px;
+      border-radius: 10px;
+      background: rgba(5, 8, 12, 0.76);
+      color: #dce8ef;
+      font-size: 13px;
+      line-height: 1;
+      letter-spacing: 0.2px;
+      white-space: nowrap;
+    }}
+    .camera-freshness::before {{
+      content: '';
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: #7f8c97;
+      flex: 0 0 auto;
+    }}
+    .camera-freshness.camera-fresh::before {{
+      background: #35c46b;
+      box-shadow: 0 0 10px rgba(53, 196, 107, 0.45);
+    }}
+    .camera-freshness.camera-stale::before {{
+      background: #ffb74d;
+      box-shadow: 0 0 10px rgba(255, 183, 77, 0.45);
+    }}
+    .camera-freshness.camera-offline::before {{
+      background: #ef5350;
+      box-shadow: 0 0 10px rgba(239, 83, 80, 0.45);
+    }}
     .empty-state {{
       width: 100%;
       padding: 24px;
@@ -736,7 +920,9 @@ def _build_dashboard_html(
   </div>
   <div class="layout">
     <div class="panel">
-      <div class="panel-title">Planta</div>
+      <div class="panel-title">
+        <span class="panel-title-text">Planta</span>
+      </div>
       <div class="panel-body floorplan-body">
         <div class="floorplan-shell" id="floorplan-shell">
           {floorplan_markup}
@@ -744,16 +930,32 @@ def _build_dashboard_html(
       </div>
     </div>
     <div class="camera-column">
-      <div class="panel">
-        <div class="panel-title">Rua</div>
+      <div class="panel camera-panel" id="panel_rua">
+        <div class="panel-title">
+          <span class="panel-title-text">Rua</span>
+          <span class="camera-status-badge" id="status_rua">Carregando</span>
+        </div>
         <div class="panel-body">
-          <img class="camera-image" id="img_rua" src="{rua_src}" alt="Rua">
+          <div class="camera-frame">
+            <img class="camera-image" id="img_rua" src="{rua_src}" alt="Rua">
+            <div class="camera-overlay">
+              <span class="camera-freshness" id="freshness_rua">Aguardando primeiro snapshot</span>
+            </div>
+          </div>
         </div>
       </div>
-      <div class="panel">
-        <div class="panel-title">Varanda</div>
+      <div class="panel camera-panel" id="panel_varanda">
+        <div class="panel-title">
+          <span class="panel-title-text">Varanda</span>
+          <span class="camera-status-badge" id="status_varanda">Carregando</span>
+        </div>
         <div class="panel-body">
-          <img class="camera-image" id="img_varanda" src="{varanda_src}" alt="Varanda">
+          <div class="camera-frame">
+            <img class="camera-image" id="img_varanda" src="{varanda_src}" alt="Varanda">
+            <div class="camera-overlay">
+              <span class="camera-freshness" id="freshness_varanda">Aguardando primeiro snapshot</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -765,6 +967,8 @@ def _build_dashboard_html(
     var dynamicClasses = [{dynamic_classes}];
     var floorplanPollTimer = null;
     var floorplanEventSource = null;
+    var cameraStatusState = {{}};
+    var cameraRenderTimer = null;
 
     function refreshImages() {{
       if (!cameraBaseUrl) {{
@@ -773,6 +977,126 @@ def _build_dashboard_html(
       var now = new Date().getTime();
       document.getElementById('img_rua').src = cameraBaseUrl + '/rua.jpg?t=' + now;
       document.getElementById('img_varanda').src = cameraBaseUrl + '/varanda.jpg?t=' + now;
+    }}
+
+    function removeDynamicClasses(element) {{
+      if (!element) {{
+        return;
+      }}
+      dynamicClasses.forEach(function(name) {{
+        element.classList.remove(name);
+      }});
+    }}
+
+    function formatAgeLabel(ageSeconds) {{
+      if (ageSeconds === null || ageSeconds === undefined || isNaN(ageSeconds)) {{
+        return 'sem snapshot';
+      }}
+      if (ageSeconds <= 1) {{
+        return 'agora';
+      }}
+      if (ageSeconds < 60) {{
+        return 'ha ' + ageSeconds + 's';
+      }}
+      if (ageSeconds < 3600) {{
+        return 'ha ' + Math.max(1, Math.round(ageSeconds / 60)) + 'min';
+      }}
+      return 'ha ' + Math.max(1, Math.round(ageSeconds / 3600)) + 'h';
+    }}
+
+    function deriveCameraStatus(camera) {{
+      if (!camera) {{
+        return {{
+          status: 'offline',
+          statusClass: 'camera-offline',
+          floorplanClass: 'device-unavailable',
+          label: 'Offline',
+          detail: 'Aguardando primeiro snapshot'
+        }};
+      }}
+
+      var nowSeconds = Math.floor(Date.now() / 1000);
+      var lastSuccess = camera.last_success ? Number(camera.last_success) : null;
+      var ageSeconds = lastSuccess ? Math.max(0, nowSeconds - lastSuccess) : null;
+      var staleAfter = Number(camera.stale_after_seconds || 0);
+      var offlineAfter = Number(camera.offline_after_seconds || 0);
+      var status = 'fresh';
+
+      if (!lastSuccess || (offlineAfter && ageSeconds !== null && ageSeconds >= offlineAfter)) {{
+        status = 'offline';
+      }} else if (!camera.ok || (staleAfter && ageSeconds !== null && ageSeconds >= staleAfter)) {{
+        status = 'stale';
+      }}
+
+      var labels = {{
+        fresh: 'Ao vivo',
+        stale: 'Atrasada',
+        offline: 'Offline'
+      }};
+      var floorplanClasses = {{
+        fresh: 'device-on',
+        stale: 'device-stale',
+        offline: 'device-unavailable'
+      }};
+      var detail = !lastSuccess
+        ? 'Aguardando primeiro snapshot'
+        : ((status === 'fresh' ? 'Atualizada ' : 'Ultimo snapshot ') + formatAgeLabel(ageSeconds));
+
+      return {{
+        status: status,
+        statusClass: 'camera-' + status,
+        floorplanClass: floorplanClasses[status],
+        label: labels[status],
+        detail: detail
+      }};
+    }}
+
+    function renderCameraRuntimeState() {{
+      ['rua', 'varanda'].forEach(function(name) {{
+        var camera = cameraStatusState[name];
+        var derived = deriveCameraStatus(camera);
+        var badge = document.getElementById('status_' + name);
+        var freshness = document.getElementById('freshness_' + name);
+        var panel = document.getElementById('panel_' + name);
+        var floorplanCamera = document.getElementById('camera.' + name);
+
+        if (badge) {{
+          badge.textContent = derived.label;
+          badge.classList.remove('camera-fresh', 'camera-stale', 'camera-offline');
+          badge.classList.add(derived.statusClass);
+        }}
+        if (freshness) {{
+          freshness.textContent = derived.detail;
+          freshness.classList.remove('camera-fresh', 'camera-stale', 'camera-offline');
+          freshness.classList.add(derived.statusClass);
+        }}
+        if (panel) {{
+          panel.classList.remove('camera-fresh', 'camera-stale', 'camera-offline');
+          panel.classList.add(derived.statusClass);
+        }}
+        if (floorplanCamera) {{
+          removeDynamicClasses(floorplanCamera);
+          floorplanCamera.classList.add(derived.floorplanClass);
+        }}
+      }});
+    }}
+
+    function ensureCameraRuntimeTicker() {{
+      if (cameraRenderTimer) {{
+        return;
+      }}
+      cameraRenderTimer = window.setInterval(renderCameraRuntimeState, 1000);
+    }}
+
+    function applyCameraRuntimeState(cameras) {{
+      if (!cameras) {{
+        return;
+      }}
+      Object.entries(cameras).forEach(function(entry) {{
+        cameraStatusState[entry[0]] = entry[1];
+      }});
+      renderCameraRuntimeState();
+      ensureCameraRuntimeTicker();
     }}
 
     function applyFloorplanState(payload) {{
@@ -786,9 +1110,7 @@ def _build_dashboard_html(
         if (!element) {{
           return;
         }}
-        dynamicClasses.forEach(function(name) {{
-          element.classList.remove(name);
-        }});
+        removeDynamicClasses(element);
         classNames.forEach(function(name) {{
           if (name) {{
             element.classList.add(name);
@@ -798,6 +1120,9 @@ def _build_dashboard_html(
       var floorplanShell = document.getElementById('floorplan-shell');
       if (floorplanShell) {{
         floorplanShell.classList.add('floorplan-ready');
+      }}
+      if (payload.cameras) {{
+        applyCameraRuntimeState(payload.cameras);
       }}
     }}
 
@@ -899,7 +1224,17 @@ def _build_embedded_html() -> str:
 
 
 def _build_floorplan_signature(payload: dict) -> str:
-    return json.dumps(payload.get('elements', {}), sort_keys=True, separators=(',', ':'))
+    signature_payload = {
+        'elements': payload.get('elements', {}),
+        'cameras': {
+            name: {
+                'last_success': data.get('last_success'),
+                'status': data.get('status'),
+            }
+            for name, data in (payload.get('cameras', {}) or {}).items()
+        },
+    }
+    return json.dumps(signature_payload, sort_keys=True, separators=(',', ':'))
 
 
 def _floorplan_event_stream():
@@ -1225,6 +1560,10 @@ def health() -> Response:
                 'dashcast_app_ids': sorted(DASHCAST_APP_IDS),
             },
             'quality_profile': _build_profile_state_payload(),
+            'camera_status': {
+                name: _build_camera_runtime_status(name)
+                for name in CAMERAS
+            },
             'cast': CAST_STATE,
         }
     )
