@@ -178,6 +178,20 @@ No estado atual:
 - layout com planta na esquerda e cameras na direita
 - cast funcionando no `Quarto do vroou`
 
+## Fluxo do repositorio
+
+A partir de `28/03/2026`, toda tarefa nova deve seguir fluxo por PR.
+
+Regra de trabalho:
+
+- criar branch a partir de `main`
+- usar prefixo `codex/`
+- implementar e validar fora de `main`
+- abrir PR para acompanhamento
+- mergear em `main` somente depois
+
+Isso passa a fazer parte do contexto de manutencao deste projeto.
+
 ## Comandos uteis
 
 Rebuild do `castwall`:

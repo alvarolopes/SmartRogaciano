@@ -119,6 +119,20 @@ Ficam fora do Git:
 - bancos e logs do Home Assistant
 - artefatos gerados em `config/www/castwall/`
 
+## Fluxo do repositorio
+
+A partir de `28/03/2026`, toda tarefa nova deste projeto deve ser trabalhada em PR.
+
+Fluxo combinado:
+
+- criar uma branch a partir de `main`
+- usar prefixo `codex/` no nome da branch
+- implementar e validar a tarefa na branch
+- abrir PR para acompanhar o escopo e o diff
+- so depois fazer merge em `main`
+
+`main` deve continuar sendo a branch estavel do projeto.
+
 ## Documentacao complementar
 
 - [CASTWALL-ARCHITECTURE.md](C:/HomeAssistant/CASTWALL-ARCHITECTURE.md)
