@@ -1,6 +1,6 @@
 # Quick fix: quando rogaciano.svg ou rogaciano.css mudar, atualize o cache-buster abaixo para forcar recarga no Home Assistant.
-image: /local/floorplan/rogaciano.svg?v=20260328b
-stylesheet: /local/floorplan/rogaciano.css?v=20260328b
+image: /local/floorplan/rogaciano.svg?v=20260329a
+stylesheet: /local/floorplan/rogaciano.css?v=20260329a
 console_log_level: warn
 log_level: warn
 defaults:
@@ -33,6 +33,7 @@ functions: |
         quarto_vroou: ['light.ventilador_do_vroou']
       },
       areaAlerts: {
+        escada: ['binary_sensor.portao_tr4_porta'],
         garagem: ['binary_sensor.garagem_movimento'],
         piscina: ['input_boolean.alerta_camera_varanda_pessoa'],
         varanda: ['input_boolean.alerta_camera_varanda_pessoa'],
@@ -89,6 +90,11 @@ functions: |
         if (!entity) return '';
         const state = String(entity && entity.state != null ? entity.state : '').toLowerCase();
         return state === 'on' ? 'motion-on' : '';
+      },
+      portalStateClass: (entity) => {
+        if (!entity) return '';
+        const state = String(entity && entity.state != null ? entity.state : '').toLowerCase();
+        return state === 'on' ? 'portal-alert-on' : '';
       }
     };
 rules:
@@ -105,6 +111,7 @@ rules:
   - entities:
       - input_boolean.ambiente_escada
       - input_select.floorplan_estado_lampada_escada
+      - binary_sensor.portao_tr4_porta
     element: ambiente.escada
     tap_action: more-info
     state_action:
@@ -112,6 +119,15 @@ rules:
       service: floorplan.class_set
       service_data: |
         > return functions.areaStateClass('escada', hass);
+  - entities:
+      - binary_sensor.portao_tr4_porta
+    element: portal.social
+    tap_action: more-info
+    state_action:
+      action: call-service
+      service: floorplan.class_set
+      service_data: |
+        > return functions.portalStateClass(entity);
   - entities:
       - input_boolean.ambiente_garagem
       - switch.garagem_interruptor_1

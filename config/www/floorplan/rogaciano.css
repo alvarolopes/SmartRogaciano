@@ -91,6 +91,10 @@ svg * {
   opacity: 0 !important;
   pointer-events: none !important;
 }
+[id="portal.social"] {
+  fill: #1a1a1a !important;
+  stroke: #1a1a1a !important;
+}
 
 .room-helper-on {
   fill: #f4e2ad !important;
@@ -165,4 +169,8 @@ svg * {
 
 [id="movimento.garagem"].motion-on {
   opacity: 0.98 !important;
+}
+[id="portal.social"].portal-alert-on {
+  fill: #ff0000 !important;
+  stroke: #ff0000 !important;
 }
