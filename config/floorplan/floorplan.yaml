@@ -1,5 +1,5 @@
 # Quick fix: quando rogaciano.svg ou rogaciano.css mudar, atualize o cache-buster abaixo para forcar recarga no Home Assistant.
-image: /local/floorplan/rogaciano.svg?v=20260329a
+image: /local/floorplan/rogaciano.svg?v=20260329b
 stylesheet: /local/floorplan/rogaciano.css?v=20260329a
 console_log_level: warn
 log_level: warn
