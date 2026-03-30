@@ -33,7 +33,7 @@ functions: |
         quarto_vroou: ['light.ventilador_do_vroou']
       },
       areaAlerts: {
-        escada: ['binary_sensor.portao_tr4_porta'],
+        escada: ['binary_sensor.portao_social'],
         garagem: ['binary_sensor.garagem_movimento'],
         piscina: ['input_boolean.alerta_camera_varanda_pessoa'],
         varanda: ['input_boolean.alerta_camera_varanda_pessoa'],
@@ -111,7 +111,7 @@ rules:
   - entities:
       - input_boolean.ambiente_escada
       - input_select.floorplan_estado_lampada_escada
-      - binary_sensor.portao_tr4_porta
+      - binary_sensor.portao_social
     element: ambiente.escada
     tap_action: more-info
     state_action:
@@ -120,7 +120,7 @@ rules:
       service_data: |
         > return functions.areaStateClass('escada', hass);
   - entities:
-      - binary_sensor.portao_tr4_porta
+      - binary_sensor.portao_social
     element: portal.social
     tap_action: more-info
     state_action:

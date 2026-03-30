@@ -212,11 +212,11 @@ alertas:
       - rua
     nota: Helper temporario para destacar a rua quando a camera da rua reportar pessoa ou movimento detectado.
   portal_social_aberto:
-    entity_id: binary_sensor.portao_tr4_porta
+    entity_id: binary_sensor.portao_social
     active_states:
       - 'on'
     element_id: portal.social
     element_class: portal-alert-on
     area_ids:
       - escada
-    nota: Quick fix para destacar o portal social e a escada em vermelho enquanto a porta estiver aberta.
+    nota: Destaca o portal social e a escada em vermelho enquanto a porta estiver aberta.
