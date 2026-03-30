@@ -51,7 +51,14 @@ Variaveis de ajuste:
 - `CAST_WATCHDOG_INTERVAL`
 - `CAST_WATCHDOG_RECOVERY_COOLDOWN`
 - `CAST_WATCHDOG_START_GRACE_SECONDS`
+- `CAST_DISCOVERY_TIMEOUT`
+- `CAST_SOCKET_TIMEOUT`
+- `CAST_SOCKET_RETRY_WAIT`
 - `DASHCAST_APP_IDS`
+
+A descoberta e a conexao do Chromecast agora rodam com timeout curto configuravel. Isso evita que o watchdog fique travado por varios minutos depois de uma oscilacao de rede e permite nova tentativa automatica assim que o dispositivo voltar.
+
+Se o `start` falhar porque o Chromecast ainda nao reapareceu, o `castwall` nao abandona mais a intencao de cast. Ele marca o cast como desejado e deixa o watchdog continuar as tentativas assim que o dispositivo responder novamente.
 
 ## Frequencia atual
 

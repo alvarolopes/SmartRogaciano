@@ -118,6 +118,10 @@ O helper `input_boolean.auto_iniciar_dashboard_tv` controla se o Home Assistant 
 
 Quando esse helper esta ligado, a automacao `TV - Auto iniciar dashboard das cameras` espera alguns segundos para o Chromecast estabilizar antes de chamar `script.mostrar_cameras_na_tv`. O castwall watchdog continua responsavel apenas por manter uma sessao ja iniciada.
 
+O watchdog tambem passou a usar timeouts curtos na descoberta e conexao do Chromecast. Isso evita que ele fique travado por muito tempo depois de oscilacoes de internet ou reboot do Chromecast, e permite retentar o cast assim que o dispositivo volta a responder.
+
+Quando um `start` manual ou automatico acontece cedo demais e o Chromecast ainda nao voltou, o `castwall` passa a manter `desired_active` ligado e deixa o watchdog concluir a recuperacao depois, sem depender de disparar o script de novo.
+
 ## Alertas no floorplan
 
 O floorplan agora suporta alertas vermelhos por area com a classe `room-alert-on`.

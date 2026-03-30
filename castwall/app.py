@@ -55,6 +55,9 @@ CAST_WATCHDOG_ENABLED = os.environ.get('CAST_WATCHDOG_ENABLED', '1').strip().low
 CAST_WATCHDOG_INTERVAL = float(os.environ.get('CAST_WATCHDOG_INTERVAL', '20'))
 CAST_WATCHDOG_RECOVERY_COOLDOWN = float(os.environ.get('CAST_WATCHDOG_RECOVERY_COOLDOWN', '30'))
 CAST_WATCHDOG_START_GRACE_SECONDS = float(os.environ.get('CAST_WATCHDOG_START_GRACE_SECONDS', '20'))
+CAST_DISCOVERY_TIMEOUT = float(os.environ.get('CAST_DISCOVERY_TIMEOUT', '8'))
+CAST_SOCKET_TIMEOUT = float(os.environ.get('CAST_SOCKET_TIMEOUT', '8'))
+CAST_SOCKET_RETRY_WAIT = float(os.environ.get('CAST_SOCKET_RETRY_WAIT', '0.5'))
 DASHCAST_APP_IDS = {
     app_id.strip()
     for app_id in os.environ.get('DASHCAST_APP_IDS', '84912283').split(',')
@@ -1363,12 +1366,62 @@ def _snapshot_worker(name: str, camera: dict) -> None:
         time.sleep(_current_snapshot_interval())
 
 
-def _get_cast() -> pychromecast.Chromecast:
-    kwargs = {}
+def _discover_chromecasts(*, friendly_names: list[str] | None = None) -> tuple[list[pychromecast.Chromecast], object]:
+    common_kwargs = {}
     if CHROMECAST_KNOWN_HOSTS:
-        kwargs['known_hosts'] = CHROMECAST_KNOWN_HOSTS
+        common_kwargs['known_hosts'] = CHROMECAST_KNOWN_HOSTS
 
-    casts, browser = pychromecast.get_chromecasts(**kwargs)
+    attempts: list[tuple[object, dict]] = []
+    if friendly_names:
+        attempts.append((pychromecast.get_listed_chromecasts, {'friendly_names': friendly_names}))
+    attempts.append((pychromecast.get_chromecasts, {}))
+
+    option_sets = [
+        {
+            'discovery_timeout': CAST_DISCOVERY_TIMEOUT,
+            'timeout': CAST_SOCKET_TIMEOUT,
+            'tries': 1,
+            'retry_wait': CAST_SOCKET_RETRY_WAIT,
+        },
+        {
+            'discovery_timeout': CAST_DISCOVERY_TIMEOUT,
+        },
+        {},
+    ]
+
+    last_type_error = None
+    for discover_func, base_kwargs in attempts:
+        for extra_kwargs in option_sets:
+            kwargs = {**common_kwargs, **base_kwargs, **extra_kwargs}
+            kwargs = {key: value for key, value in kwargs.items() if value not in (None, '', [])}
+            try:
+                return discover_func(**kwargs)
+            except TypeError as exc:
+                last_type_error = exc
+                continue
+
+    if last_type_error is not None:
+        raise RuntimeError(f'Nao foi possivel descobrir o Chromecast com timeout configuravel: {last_type_error}')
+
+    raise RuntimeError('Falha inesperada ao descobrir o Chromecast.')
+
+
+
+def _wait_for_cast_ready(cast: pychromecast.Chromecast) -> None:
+    try:
+        cast.wait(timeout=CAST_SOCKET_TIMEOUT)
+        return
+    except TypeError:
+        pass
+
+    cast.wait()
+
+
+
+def _get_cast() -> pychromecast.Chromecast:
+    browser = None
+    friendly_names = [CHROMECAST_NAME] if CHROMECAST_NAME else None
+    casts, browser = _discover_chromecasts(friendly_names=friendly_names)
     try:
         if not casts:
             raise RuntimeError(
@@ -1378,7 +1431,7 @@ def _get_cast() -> pychromecast.Chromecast:
         if CHROMECAST_NAME:
             for cast in casts:
                 if cast.name.strip().casefold() == CHROMECAST_NAME.casefold():
-                    cast.wait()
+                    _wait_for_cast_ready(cast)
                     return cast
 
             available = [cast.name for cast in casts]
@@ -1387,7 +1440,7 @@ def _get_cast() -> pychromecast.Chromecast:
             )
 
         cast = casts[0]
-        cast.wait()
+        _wait_for_cast_ready(cast)
         return cast
     finally:
         if browser is not None:
@@ -1457,31 +1510,51 @@ def _attempt_watchdog_recovery(reason: str) -> None:
         CAST_STATE['last_recovery_attempt'] = now
         CAST_STATE['last_watchdog_status'] = 'recovering'
         CAST_STATE['last_watchdog_reason'] = reason
-        APP.logger.warning('Watchdog tentando recuperar o cast: %s', reason)
 
-        try:
-            cast, attempt, _ = _start_dashcast()
-            session = _inspect_cast_session(cast)
-        except Exception as exc:  # noqa: BLE001
+    APP.logger.warning('Watchdog tentando recuperar o cast: %s', reason)
+
+    try:
+        cast, attempt, _ = _start_dashcast()
+        session = _inspect_cast_session(cast)
+    except Exception as exc:  # noqa: BLE001
+        failure_reason = f'{reason}; recovery failed: {exc}'
+        with CAST_LOCK:
             CAST_STATE['active'] = False
-            CAST_STATE['last_error'] = f'{reason}; recovery failed: {exc}'
+            CAST_STATE['last_error'] = failure_reason
             CAST_STATE['last_watchdog_status'] = 'recovery-failed'
             CAST_STATE['recovery_failures'] = int(CAST_STATE.get('recovery_failures') or 0) + 1
-            APP.logger.error('Watchdog falhou ao recuperar o cast: %s', CAST_STATE['last_error'])
-            return
+        APP.logger.error('Watchdog falhou ao recuperar o cast: %s', failure_reason)
+        return
 
-        CAST_STATE['active'] = True
-        CAST_STATE['last_start'] = now
-        CAST_STATE['last_refresh'] = now
-        CAST_STATE['last_error'] = None
-        CAST_STATE['last_watchdog_status'] = 'recovered'
-        CAST_STATE['last_watchdog_reason'] = reason
-        CAST_STATE['last_recovery_success'] = now
-        CAST_STATE['last_watchdog_check'] = now
-        CAST_STATE['recovery_count'] = int(CAST_STATE.get('recovery_count') or 0) + 1
-        CAST_STATE['last_seen_device'] = session['device']
-        CAST_STATE['last_seen_app_id'] = PRIMARY_DASHCAST_APP_ID
-        CAST_STATE['last_seen_display_name'] = 'DashCast'
+    with CAST_LOCK:
+        if not CAST_STATE['desired_active']:
+            CAST_STATE['active'] = False
+            CAST_STATE['last_watchdog_status'] = 'recovery-cancelled'
+            CAST_STATE['last_watchdog_reason'] = reason
+            CAST_STATE['last_error'] = None
+            should_quit = True
+        else:
+            CAST_STATE['active'] = True
+            CAST_STATE['last_start'] = now
+            CAST_STATE['last_refresh'] = now
+            CAST_STATE['last_error'] = None
+            CAST_STATE['last_watchdog_status'] = 'recovered'
+            CAST_STATE['last_watchdog_reason'] = reason
+            CAST_STATE['last_recovery_success'] = now
+            CAST_STATE['last_watchdog_check'] = now
+            CAST_STATE['recovery_count'] = int(CAST_STATE.get('recovery_count') or 0) + 1
+            CAST_STATE['last_seen_device'] = session['device']
+            CAST_STATE['last_seen_app_id'] = PRIMARY_DASHCAST_APP_ID
+            CAST_STATE['last_seen_display_name'] = 'DashCast'
+            should_quit = False
+
+    if should_quit:
+        try:
+            cast.quit_app()
+        except Exception:  # noqa: BLE001
+            pass
+        APP.logger.info('Watchdog descartou a recuperacao porque o cast deixou de ser desejado.')
+        return
 
     APP.logger.warning(
         'Watchdog recuperou o cast no dispositivo %s apos %s tentativas internas do DashCast.',
@@ -1492,76 +1565,95 @@ def _attempt_watchdog_recovery(reason: str) -> None:
 
 def _cast_watchdog_worker() -> None:
     APP.logger.warning(
-        'Cast watchdog habilitado. Intervalo=%ss cooldown=%ss grace=%ss',
+        'Cast watchdog habilitado. Intervalo=%ss cooldown=%ss grace=%ss discovery_timeout=%ss socket_timeout=%ss',
         CAST_WATCHDOG_INTERVAL,
         CAST_WATCHDOG_RECOVERY_COOLDOWN,
         CAST_WATCHDOG_START_GRACE_SECONDS,
+        CAST_DISCOVERY_TIMEOUT,
+        CAST_SOCKET_TIMEOUT,
     )
 
     while True:
         time.sleep(CAST_WATCHDOG_INTERVAL)
         now = _now_ts()
 
-        if not CAST_STATE.get('desired_active'):
-            _update_cast_state(
-                last_watchdog_check=now,
-                last_watchdog_status='idle',
-                last_watchdog_reason=None,
-            )
-            continue
-
-        last_start = CAST_STATE.get('last_start')
-        if last_start and now - int(last_start) < CAST_WATCHDOG_START_GRACE_SECONDS:
-            _update_cast_state(
-                last_watchdog_check=now,
-                last_watchdog_status='start-grace',
-                last_watchdog_reason=None,
-            )
-            continue
-
         try:
-            cast = _get_cast()
-            session = _inspect_cast_session(cast)
+            if not CAST_STATE.get('desired_active'):
+                _update_cast_state(
+                    last_watchdog_check=now,
+                    last_watchdog_status='idle',
+                    last_watchdog_reason=None,
+                )
+                continue
+
+            last_start = CAST_STATE.get('last_start')
+            if last_start and now - int(last_start) < CAST_WATCHDOG_START_GRACE_SECONDS:
+                _update_cast_state(
+                    last_watchdog_check=now,
+                    last_watchdog_status='start-grace',
+                    last_watchdog_reason=None,
+                )
+                continue
+
+            _update_cast_state(
+                last_watchdog_check=now,
+                last_watchdog_status='checking',
+                last_watchdog_reason=None,
+            )
+
+            try:
+                cast = _get_cast()
+                session = _inspect_cast_session(cast)
+            except Exception as exc:  # noqa: BLE001
+                reason = f'watchdog nao conseguiu consultar o Chromecast: {exc}'
+                _update_cast_state(
+                    active=False,
+                    last_error=reason,
+                    last_watchdog_check=now,
+                    last_watchdog_status='chromecast-unreachable',
+                    last_watchdog_reason=reason,
+                )
+                APP.logger.error(reason)
+                _attempt_watchdog_recovery(reason)
+                continue
+
+            _update_cast_state(
+                last_watchdog_check=now,
+                last_seen_device=session['device'],
+                last_seen_app_id=session['app_id'],
+                last_seen_display_name=session['display_name'],
+            )
+
+            if session['is_dashcast']:
+                _update_cast_state(
+                    active=True,
+                    last_refresh=now,
+                    last_error=None,
+                    last_watchdog_status='ok',
+                    last_watchdog_reason=None,
+                )
+                continue
+
+            app_label = session['display_name'] or session['app_id'] or 'desconhecido'
+            reason = f'watchdog detectou sessao inesperada no Chromecast: {app_label}'
+            _update_cast_state(
+                active=False,
+                last_error=reason,
+                last_watchdog_status='session-lost',
+                last_watchdog_reason=reason,
+            )
+            APP.logger.warning(reason)
+            _attempt_watchdog_recovery(reason)
         except Exception as exc:  # noqa: BLE001
-            reason = f'watchdog nao conseguiu consultar o Chromecast: {exc}'
+            reason = f'watchdog encontrou erro interno: {exc}'
             _update_cast_state(
                 active=False,
                 last_error=reason,
                 last_watchdog_check=now,
-                last_watchdog_status='chromecast-unreachable',
+                last_watchdog_status='worker-error',
                 last_watchdog_reason=reason,
             )
-            APP.logger.error(reason)
-            _attempt_watchdog_recovery(reason)
-            continue
-
-        _update_cast_state(
-            last_watchdog_check=now,
-            last_seen_device=session['device'],
-            last_seen_app_id=session['app_id'],
-            last_seen_display_name=session['display_name'],
-        )
-
-        if session['is_dashcast']:
-            _update_cast_state(
-                active=True,
-                last_refresh=now,
-                last_error=None,
-                last_watchdog_status='ok',
-                last_watchdog_reason=None,
-            )
-            continue
-
-        app_label = session['display_name'] or session['app_id'] or 'desconhecido'
-        reason = f'watchdog detectou sessao inesperada no Chromecast: {app_label}'
-        _update_cast_state(
-            active=False,
-            last_error=reason,
-            last_watchdog_status='session-lost',
-            last_watchdog_reason=reason,
-        )
-        APP.logger.warning(reason)
-        _attempt_watchdog_recovery(reason)
+            APP.logger.exception(reason)
 
 
 @APP.get('/')
@@ -1606,6 +1698,9 @@ def health() -> Response:
                 'interval_seconds': CAST_WATCHDOG_INTERVAL,
                 'recovery_cooldown_seconds': CAST_WATCHDOG_RECOVERY_COOLDOWN,
                 'start_grace_seconds': CAST_WATCHDOG_START_GRACE_SECONDS,
+                'discovery_timeout_seconds': CAST_DISCOVERY_TIMEOUT,
+                'socket_timeout_seconds': CAST_SOCKET_TIMEOUT,
+                'socket_retry_wait_seconds': CAST_SOCKET_RETRY_WAIT,
                 'dashcast_app_ids': sorted(DASHCAST_APP_IDS),
             },
             'quality_profile': _build_profile_state_payload(),
@@ -1675,9 +1770,43 @@ def snapshot(camera_name: str):
 
 @APP.post('/api/cast/start')
 def cast_start() -> Response:
+    request_started_at = _now_ts()
     with CAST_LOCK:
+        CAST_STATE['desired_active'] = True
+        CAST_STATE['active'] = False
+        CAST_STATE['last_error'] = None
+        CAST_STATE['last_watchdog_status'] = 'starting'
+        CAST_STATE['last_watchdog_reason'] = None
+        CAST_STATE['last_watchdog_check'] = request_started_at
+
+    try:
         cast, attempt, cast_url = _start_dashcast()
         session = _inspect_cast_session(cast)
+    except Exception as exc:  # noqa: BLE001
+        failure_reason = str(exc)
+        with CAST_LOCK:
+            CAST_STATE['active'] = False
+            CAST_STATE['desired_active'] = True
+            CAST_STATE['last_error'] = failure_reason
+            CAST_STATE['last_watchdog_status'] = 'start-failed-pending-recovery'
+            CAST_STATE['last_watchdog_reason'] = failure_reason
+            CAST_STATE['last_watchdog_check'] = _now_ts()
+        APP.logger.warning('Start do cast falhou agora, mas o watchdog vai continuar tentando: %s', failure_reason)
+        return (
+            jsonify(
+                {
+                    'ok': False,
+                    'action': 'start',
+                    'error': failure_reason,
+                    'desired_active': True,
+                    'pending_recovery': True,
+                    'cast_mode': CAST_MODE,
+                }
+            ),
+            503,
+        )
+
+    with CAST_LOCK:
         CAST_STATE['active'] = True
         CAST_STATE['desired_active'] = True
         CAST_STATE['last_start'] = _now_ts()
