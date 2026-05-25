@@ -1,124 +1,271 @@
 # Rogaciano
 
-A personal smart home project built to prove that a useful home automation stack does not need expensive infrastructure or a fully integrated ecosystem from day one.
+A personal smart home project focused on building a practical, low-cost home automation stack with the tools and devices already available in the house.
 
-This repository documents my Home Assistant setup running on Docker for Windows, combining low-cost devices, custom glue code, and incremental automation work into a practical smart house dashboard for daily use.
+This repository documents a real Home Assistant environment running on Docker for Windows, combining floorplan-based control, Tapo cameras, Tuya devices, and a custom Chromecast delivery workflow. The goal is not to build a perfect lab setup. The goal is to build something reliable, maintainable, and useful in everyday life.
 
-The main goal is simple: take a house with only a few connected devices, integrate them automatically, expose real device state, and turn that into a system that is reliable enough to use on a TV, not just in an admin panel.
+## Vision
 
-## What the project does
+Rogaciano is an incremental smart house project built around three ideas:
 
-- runs Home Assistant in Docker with persistent configuration
-- renders a house floorplan with live device state overlays
-- integrates Tapo cameras and Tuya devices
-- builds a TV-friendly dashboard for cameras and floorplan status
-- casts that dashboard to a Chromecast through a custom local service
-- handles mixed network scenarios where the host uses both Ethernet and Wi-Fi
+- start with limited resources instead of waiting for a full premium ecosystem
+- integrate devices automatically whenever possible, even across different vendors
+- turn the result into a dashboard that is useful outside the admin panel, especially on a TV
 
-## Why this exists
+This project treats the house as a living system that can evolve over time:
 
-This is a personal project focused on building a smart home with limited resources and gradually connected devices.
+- devices can be added gradually
+- mappings can be refined without redesigning the whole setup
+- missing integrations can be represented with helpers until real entities exist
+- dashboards remain versioned and understandable as the house grows
 
-Instead of waiting for a perfect ecosystem, the approach here is to:
+## What the project delivers
 
-- integrate what already exists in the house
-- normalize state across different vendors
-- automate the boring parts
-- build a dashboard that is clear enough for real everyday use
-- keep everything maintainable in plain files under version control
+- Home Assistant in Docker with persistent local configuration
+- a real SVG floorplan connected to Home Assistant state
+- Tapo camera integration and RTSP-based TV delivery
+- Tuya integration for lights, switches, fan/light modules, and sensors
+- a dedicated TV dashboard service called `castwall`
+- Chromecast delivery with recovery logic and runtime quality profiles
+- network-aware host IP selection for mixed Ethernet and Wi-Fi environments
 
-## Technical stack
+## Core stack
 
-### Core platform
+### Platform
 
 - `Home Assistant`
 - `Docker Compose`
 - `Windows host`
 
-### Device integrations
+### Integrations
 
-- `TP-Link Tapo` for cameras
-- `Tuya` for switches, fan/light modules, and sensors
-- `Google Cast / Chromecast` for TV display workflows
+- `TP-Link Tapo`
+- `Tuya`
+- `Google Cast / Chromecast`
 
-### Custom services
+### Custom components and implementation
 
 - `castwall`
   - custom Flask service
-  - captures RTSP snapshots with `ffmpeg`
-  - assembles the TV dashboard page
-  - sends the dashboard to Chromecast with `pychromecast`
-
-### Frontend and dashboard
+  - uses `ffmpeg` to capture RTSP snapshots
+  - uses `pychromecast` to control the Chromecast session
 
 - `ha-floorplan`
-- `SVG` floorplan
-- `YAML` dashboards
-- custom CSS state styling
+  - SVG floorplan rendered from Home Assistant state
 
-## Current architecture
+- `YAML dashboards`
+  - explicit Lovelace configuration for floorplan and TV flows
 
-The stack currently revolves around two main services:
+- custom CSS and mappings
+  - room overlays
+  - device state styling
+  - alert and stale-camera visual states
 
-- `homeassistant`
-  - main Home Assistant container
-  - persistent configuration stored in `config/`
+## Feature set
 
-- `castwall`
-  - lightweight local service exposed on port `8090`
-  - grabs camera snapshots
-  - merges camera data with floorplan state
-  - serves a TV-ready dashboard
-  - controls dashboard casting to Chromecast
+### 1. Persistent Home Assistant deployment
 
-## Dashboard behavior
+- Home Assistant runs inside Docker and keeps its configuration under `config/`
+- the project is meant to survive host restarts without losing the dashboard setup
+- the repository stores the maintainable configuration, not volatile runtime state
 
-The TV dashboard combines:
+### 2. Real house floorplan
 
-- the house floorplan on one side
-- camera panels on the other side
-- real-time device state styling on top of the SVG
+- the house is modeled with a real SVG floorplan
+- the SVG is published through Home Assistant static assets
+- the floorplan is mapped to entities through YAML rather than hardcoded logic
+- all rooms in the floorplan can exist even before they have real devices attached
 
-State visualization is intentionally simple and operational:
+### 3. Complete room coverage through helpers
 
-- active devices are highlighted clearly
-- powered-off devices stay visually neutral
-- unavailable or offline devices remain easy to distinguish
-- cameras expose freshness status such as live, stale, or offline
+- the project creates helper entities for all areas represented in the floorplan
+- this allows the dashboard to stay structurally complete from day one
+- rooms can be automated later without changing the dashboard model
 
-## Quality profiles
+### 4. Device-to-floorplan mapping
 
-The dashboard supports runtime quality profiles so the same project can balance stability and responsiveness depending on the device and network quality.
+- every visible device marker in the floorplan is mapped to a Home Assistant entity
+- mappings are stored in dedicated YAML files for maintainability
+- mappings support real integrations first and helper placeholders when a device is not integrated yet
 
-Available profiles:
+### 5. State-based visual rendering
+
+- the floorplan uses Home Assistant state to style devices and rooms
+- lights, fans, climate placeholders, media targets, and cameras have visual state classes
+- unavailable devices remain visually distinct from devices that are intentionally off
+
+### 6. Tapo camera integration
+
+- Tapo cameras are integrated into Home Assistant
+- live-view entities can be used where available
+- a more stable RTSP/TCP path can be used when needed for camera delivery workflows
+- camera state is reused both in Home Assistant and in the TV dashboard
+
+### 7. Tuya device integration
+
+- Tuya is used to discover and integrate practical smart devices already present in the house
+- current usage includes switch modules, fan/light modules, and sensors
+- Tuya entities are reused in the floorplan whenever they provide the best operational state
+
+### 8. TV-friendly dashboard generation
+
+- the project includes a dedicated dashboard flow for large-screen visualization
+- the TV layout combines floorplan context and camera monitoring
+- the design is optimized for legibility and stability, not just feature density
+
+### 9. Custom `castwall` service
+
+`castwall` is the main custom piece of the project. It is responsible for turning Home Assistant state and camera media into a practical Chromecast dashboard.
+
+Main responsibilities:
+
+- capture camera snapshots from RTSP sources
+- publish a lightweight local dashboard
+- merge floorplan state with camera panels
+- expose control endpoints for Home Assistant
+- send the dashboard to Chromecast
+
+### 10. Chromecast delivery workflow
+
+- Home Assistant starts the TV dashboard through `rest_command`
+- `castwall` discovers the Chromecast and opens the dashboard on it
+- the current validated workflow uses `CAST_MODE=direct`
+- the dashboard is delivered locally rather than relying on a public cloud dashboard
+
+### 11. Cast watchdog and self-recovery
+
+The Chromecast workflow includes internal recovery logic:
+
+- detects when the Chromecast leaves the expected app/session
+- attempts recovery only while casting is still desired
+- respects manual stop actions
+- retries after temporary network instability
+- uses short discovery and socket timeouts to avoid long dead periods
+
+This makes the TV dashboard much more resilient than a one-shot cast command.
+
+### 12. Runtime quality profiles
+
+The TV dashboard supports runtime quality profiles:
 
 - `economy`
 - `normal`
 - `near_live`
 
-These profiles change snapshot cadence, refresh interval, and image resolution without forcing a rebuild.
+These profiles control:
 
-## Floorplan and smart house model
+- snapshot interval
+- visual refresh cadence
+- image width / quality trade-off
 
-The floorplan is backed by a real SVG representation of the house and is mapped to Home Assistant entities through YAML.
+Profiles can be changed at runtime without rebuilds and are persisted by `castwall`.
 
-The project currently includes:
+### 13. Home Assistant scripts for TV control
 
-- room helpers for full floorplan coverage
-- device-to-SVG mapping files
-- visual rules for lights, cameras, fans, climate placeholders, and media entities
-- alert overlays for motion and camera-related attention states
+The project exposes scripts such as:
 
-This makes the system useful even when some rooms or devices are not fully automated yet.
+- `mostrar_cameras_na_tv`
+- `parar_cameras_na_tv`
+- `perfil_dashboard_tv_economia`
+- `perfil_dashboard_tv_normal`
+- `perfil_dashboard_tv_quase_live`
 
-## Network constraints handled by the project
+This means the custom TV flow remains controllable from inside Home Assistant instead of being a separate tool.
 
-One of the practical challenges in this setup is that the machine may use:
+### 14. Automatic dashboard start when the TV wakes up
 
-- `Ethernet` for normal work
-- `Wi-Fi` for Chromecast and mesh-network smart devices
+The project includes a Home Assistant automation that:
 
-Because of that, the project includes scripts that detect the best local IPv4 path for casting and keep the local dashboard reachable by the Chromecast without manual reconfiguration every time the network context changes.
+- watches the Chromecast entity
+- detects when it becomes reachable again
+- waits a short stabilization window
+- automatically starts the TV dashboard if the helper is enabled
+
+This is an important quality-of-life feature because the system can recover from normal TV power cycles with less manual interaction.
+
+### 15. Camera freshness monitoring
+
+The TV dashboard does not only show images. It also tracks how healthy those images are.
+
+Derived camera states include:
+
+- `fresh`
+- `stale`
+- `offline`
+
+Those states are used to:
+
+- label camera cards
+- style floorplan camera markers
+- differentiate between a healthy feed and an outdated image
+
+### 16. Event-driven floorplan refresh
+
+- the dashboard can consume floorplan state through a continuous stream endpoint
+- when that is not stable enough for the target browser/device, it can fall back to lightweight polling
+- this allows state updates to stay responsive without overloading the display pipeline
+
+### 17. Motion and alert overlays
+
+The floorplan supports separate alert logic, not just normal state logic.
+
+Examples:
+
+- motion-related highlights
+- camera-related alert helpers
+- room-level alert classes with higher visual priority
+
+This gives the dashboard an operational monitoring role, not just a static control role.
+
+### 18. Mixed network awareness
+
+This project was built for a host that may use:
+
+- `Ethernet` for general computer use
+- `Wi-Fi` for mesh-network devices such as Chromecast and cameras
+
+Because of that, the project includes a network selection script that:
+
+- inspects the host interfaces
+- ignores virtual interfaces when needed
+- checks target IPs from the environment
+- prefers the most appropriate local IPv4 route for the dashboard
+
+This avoids manual reconfiguration whenever the casting path depends on Wi-Fi but the computer is also connected by cable.
+
+### 19. Clear repository boundaries
+
+The repository is designed for long-term maintenance:
+
+- configuration and logic are versioned
+- secrets stay in `.env.local`
+- volatile Home Assistant internals remain outside Git
+- generated runtime artifacts are excluded
+
+This makes the repo suitable both as a working project and as technical portfolio material.
+
+## Architecture summary
+
+The stack currently revolves around two services:
+
+- `homeassistant`
+  - the main automation and state platform
+  - persistent configuration under `config/`
+
+- `castwall`
+  - the local delivery service for TV dashboards
+  - camera snapshot pipeline
+  - Chromecast control
+  - quality profile management
+
+High-level flow:
+
+1. Home Assistant stores and exposes the current house state.
+2. Tapo and Tuya integrations feed entities into Home Assistant.
+3. The floorplan maps those entities to SVG elements.
+4. `castwall` reads Home Assistant state and camera snapshots.
+5. `castwall` serves a TV-friendly page.
+6. Chromecast opens that page and keeps receiving refreshes.
 
 ## Repository structure
 
@@ -127,23 +274,38 @@ Because of that, the project includes scripts that detect the best local IPv4 pa
 
 - `config/`
   - versioned Home Assistant configuration
-  - dashboards
-  - floorplan files
-  - mappings, helpers, scripts, and YAML definitions
+  - YAML dashboards
+  - floorplan assets and mappings
+  - scripts, automations, helpers, and Lovelace files
 
 - `castwall/`
-  - source code for the custom Chromecast dashboard service
+  - custom Flask application for TV dashboard delivery
 
 - `scripts/`
-  - local utility scripts for startup and network updates
+  - local startup and network utility scripts
 
 - `media/`
   - local media mounted into Home Assistant
 
-## Run locally
+## Main configuration assets
+
+- `config/configuration.yaml`
+- `config/scripts.yaml`
+- `config/automations.yaml`
+- `config/floorplan/mapeamento.yaml`
+- `config/floorplan/floorplan.yaml`
+- `config/www/floorplan/rogaciano.svg`
+- `config/www/floorplan/rogaciano.css`
+- `castwall/app.py`
+
+## Running the project locally
 
 1. Copy `.env.example` to `.env.local`
-2. Adjust local values in `.env.local`
+2. Fill in local values such as:
+   - Chromecast name/IP
+   - `PUBLIC_URL`
+   - RTSP camera endpoints
+   - quality profile defaults
 3. Start the stack:
 
 ```powershell
@@ -154,27 +316,33 @@ Then open:
 
 - `http://localhost:8123`
 
-## Local environment variables
+## Environment variables
 
-Sensitive and machine-specific values live in `.env.local`, including:
+`.env.local` is expected to hold machine-specific or sensitive values, such as:
 
-- Chromecast name and IP
-- public URL used by `castwall`
-- camera RTSP endpoints
-- refresh intervals and quality profile defaults
+- `CHROMECAST_KNOWN_HOSTS`
+- `CHROMECAST_NAME`
+- `PUBLIC_URL`
+- `SNAPSHOT_BASE_URL`
+- `HOME_ASSISTANT_URL`
+- `CAST_MODE`
+- `CAMERA_RUA_RTSP`
+- `CAMERA_VARANDA_RTSP`
+- `DEFAULT_QUALITY_PROFILE`
+- watchdog and timeout settings
 
-`.env.example` shows the expected format.
+The template file is available in:
 
-## Repository policy
+- `.env.example`
 
-This repository is prepared for private use and versioned maintenance.
+## Git policy
 
 Included in Git:
 
-- `castwall` source code
+- custom service code
 - versioned Home Assistant configuration
 - floorplan assets
-- dashboards, mappings, helpers, and scripts
+- mappings, helpers, dashboards, and scripts
 - technical documentation
 
 Excluded from Git:
@@ -185,23 +353,14 @@ Excluded from Git:
 - Home Assistant databases and logs
 - generated runtime artifacts under `config/www/castwall/`
 
-## Main files to maintain
-
-- `docker-compose.yml`
-- `config/configuration.yaml`
-- `config/scripts.yaml`
-- `config/floorplan/mapeamento.yaml`
-- `config/www/floorplan/rogaciano.svg`
-- `config/www/floorplan/rogaciano.css`
-- `castwall/app.py`
-
 ## Additional documentation
 
 - `CASTWALL-ARCHITECTURE.md`
 
-## Notes
+## Practical notes
 
-- the current casting path uses `CAST_MODE=direct`
-- the dashboard is optimized for practical stability before visual perfection
-- the floorplan is driven by real Home Assistant state whenever possible
-- the project is intentionally incremental: devices can be replaced, remapped, or upgraded over time without redesigning the whole system
+- the project is intentionally incremental
+- the dashboard is optimized for operational stability first
+- the floorplan uses real Home Assistant state whenever possible
+- placeholders are acceptable when they preserve system structure and make future integrations easier
+- the project is meant to evolve with the house rather than be finished all at once
