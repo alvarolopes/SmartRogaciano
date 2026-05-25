@@ -1,51 +1,51 @@
 # Castwall Architecture
 
-## Objetivo
+## Goal
 
-Este ambiente foi ajustado para mostrar um dashboard de cameras no Chromecast `Quarto do vroou` a partir do Home Assistant rodando em Docker no Windows.
+This environment was tuned to show a camera and floorplan dashboard on the `Quarto do vroou` Chromecast, using Home Assistant running in Docker on Windows.
 
-## Componentes
+## Components
 
 - `homeassistant`
-  - container principal do Home Assistant
-  - interface exposta em `8123`
-  - persistencia em `config/`
+  - main Home Assistant container
+  - UI exposed on port `8123`
+  - persistent data stored in `config/`
 
 - `castwall`
-  - servico Flask em `8090`
-  - captura snapshots das cameras RTSP com `ffmpeg`
-  - publica a pagina da TV
-  - faz o envio para o Chromecast via `pychromecast`
+  - Flask service exposed on port `8090`
+  - captures RTSP snapshots with `ffmpeg`
+  - publishes the TV dashboard page
+  - sends the dashboard to Chromecast with `pychromecast`
 
-## Fluxo atual
+## Current flow
 
-1. O Home Assistant chama `rest_command.cast_camera_wall_start`.
-2. O `rest_command` aciona `http://host.docker.internal:8090/api/cast/start`.
-3. O `castwall` localiza o Chromecast `Quarto do vroou`.
-4. O `castwall` atualiza snapshots das cameras.
-5. O Chromecast abre a pagina publicada pelo `castwall`.
-6. O `castwall` mantem o refresh do dashboard em segundo plano.
+1. Home Assistant calls `rest_command.cast_camera_wall_start`.
+2. That `rest_command` hits `http://host.docker.internal:8090/api/cast/start`.
+3. `castwall` locates the `Quarto do vroou` Chromecast.
+4. `castwall` refreshes camera snapshots.
+5. The Chromecast opens the page published by `castwall`.
+6. `castwall` keeps the dashboard refresh loop alive in the background.
 
-## Modo de cast atual
+## Current cast mode
 
-O fluxo principal validado usa:
+The validated primary flow uses:
 
 - `CAST_MODE: direct`
 
-Nesse modo, o Chromecast abre a pagina do `castwall` diretamente na porta `8090`.
+In this mode, the Chromecast opens the `castwall` page directly on port `8090`.
 
-## Watchdog de cast
+## Cast watchdog
 
-O castwall mantem um watchdog interno para a sessao do Chromecast.
+`castwall` keeps an internal watchdog for the Chromecast session.
 
-Comportamento atual:
+Current behavior:
 
-- so tenta recuperar a sessao quando o cast continua desejado
-- detecta quando o Chromecast sai do DashCast e volta para Backdrop ou outro app
-- tenta relancar o DashCast automaticamente apos perda de sessao
-- respeita stop manual, ou seja, nao religa sozinho quando o usuario mandar parar
+- only tries to recover the session while casting is still desired
+- detects when Chromecast leaves DashCast and returns to Backdrop or another app
+- automatically re-launches DashCast after session loss
+- respects a manual stop, so it does not resume by itself after the user explicitly stops it
 
-Variaveis de ajuste:
+Tuning variables:
 
 - `CAST_WATCHDOG_ENABLED`
 - `CAST_WATCHDOG_INTERVAL`
@@ -56,15 +56,15 @@ Variaveis de ajuste:
 - `CAST_SOCKET_RETRY_WAIT`
 - `DASHCAST_APP_IDS`
 
-A descoberta e a conexao do Chromecast agora rodam com timeout curto configuravel. Isso evita que o watchdog fique travado por varios minutos depois de uma oscilacao de rede e permite nova tentativa automatica assim que o dispositivo voltar.
+Chromecast discovery and connection now run with short configurable timeouts. That prevents the watchdog from getting stuck for several minutes after network instability and allows automatic retries as soon as the device starts responding again.
 
-Se o `start` falhar porque o Chromecast ainda nao reapareceu, o `castwall` nao abandona mais a intencao de cast. Ele marca o cast como desejado e deixa o watchdog continuar as tentativas assim que o dispositivo responder novamente.
+If `start` fails because Chromecast is not back on the network yet, `castwall` no longer drops the casting intent. It keeps the session marked as desired and lets the watchdog continue recovery attempts.
 
-## Frequencia atual
+## Runtime quality profiles
 
-O `castwall` agora suporta perfis de qualidade em runtime.
+`castwall` supports runtime quality profiles.
 
-Perfis disponiveis:
+Available profiles:
 
 - `economy`
   - `snapshot_interval: 10`
@@ -81,42 +81,42 @@ Perfis disponiveis:
   - `image_refresh_seconds: 1`
   - `snapshot_width: 960`
 
-O perfil inicial do processo continua vindo de:
+The initial process profile still comes from:
 
 - `DEFAULT_QUALITY_PROFILE`
 
-Depois do boot, o perfil ativo fica persistido em:
+After boot, the active profile is persisted in:
 
 - `config/www/castwall/runtime/profile.json`
 
-Isso permite trocar o comportamento do dashboard sem rebuild nem edicao manual de ambiente.
+That makes it possible to adjust dashboard behavior without rebuilds or manual environment edits.
 
-## Arquivos principais
+## Main files
 
-- [docker-compose.yml](C:/HomeAssistant/docker-compose.yml)
-- [config/configuration.yaml](C:/HomeAssistant/config/configuration.yaml)
-- [config/scripts.yaml](C:/HomeAssistant/config/scripts.yaml)
-- [castwall/app.py](C:/HomeAssistant/castwall/app.py)
-- [config/floorplan/mapeamento.yaml](C:/HomeAssistant/config/floorplan/mapeamento.yaml)
-- [config/www/floorplan/rogaciano.svg](C:/HomeAssistant/config/www/floorplan/rogaciano.svg)
-- [config/www/floorplan/rogaciano.css](C:/HomeAssistant/config/www/floorplan/rogaciano.css)
+- `docker-compose.yml`
+- `config/configuration.yaml`
+- `config/scripts.yaml`
+- `castwall/app.py`
+- `config/floorplan/mapeamento.yaml`
+- `config/www/floorplan/rogaciano.svg`
+- `config/www/floorplan/rogaciano.css`
 
-## Floorplan no dashboard
+## Floorplan inside the dashboard
 
-O dashboard atual combina:
+The current dashboard combines:
 
-- planta da casa na esquerda
-- duas cameras na direita
-- estados dos ambientes e dispositivos sobrepostos ao SVG
+- the house floorplan on the left
+- two cameras on the right
+- room and device states layered on top of the SVG
 
-A pagina servida pelo `castwall` faz o seguinte:
+The page served by `castwall` does the following:
 
-1. embute o SVG a partir de `config/www/floorplan/rogaciano.svg`
-2. embute o CSS a partir de `config/www/floorplan/rogaciano.css`
-3. consulta os mapeamentos em `config/floorplan/mapeamento.yaml`
-4. busca os estados atuais na API do Home Assistant
-5. usa `config/home-assistant_v2.db` apenas como fallback
-6. aplica classes CSS como:
+1. embeds the SVG from `config/www/floorplan/rogaciano.svg`
+2. embeds the CSS from `config/www/floorplan/rogaciano.css`
+3. reads mappings from `config/floorplan/mapeamento.yaml`
+4. fetches the latest states from the Home Assistant API
+5. uses `config/home-assistant_v2.db` only as a fallback
+6. applies CSS classes such as:
    - `room-helper-on`
    - `room-helper-off`
    - `room-light-on`
@@ -125,216 +125,95 @@ A pagina servida pelo `castwall` faz o seguinte:
    - `device-unavailable`
    - `glare-on`
 
-## Fonte dos estados
+## State sources
 
-Fonte principal:
+Primary source:
 
-- API do Home Assistant em `http://homeassistant:8123`
+- Home Assistant API at `http://homeassistant:8123`
 
 Fallback:
 
 - `config/home-assistant_v2.db`
 
-Observacao importante:
+Important note:
 
-- neste ambiente Windows + Docker Desktop, a leitura SQLite que funcionou no container foi com URI `immutable=1`
+- in this Windows + Docker Desktop environment, SQLite access that worked inside the container used the `immutable=1` URI mode
 
-## Atualizacao da planta
+## Floorplan updates
 
-O dashboard tenta manter uma conexao continua em `GET /api/floorplan/stream` para refletir mudancas de estado sem depender apenas do ciclo das cameras.
+The dashboard tries to keep a continuous `GET /api/floorplan/stream` connection so state changes can appear without depending only on camera refresh cycles.
 
-## Indicadores de frescor das cameras
+## Camera freshness indicators
 
-O `castwall` agora calcula um estado derivado para cada camera com base no ultimo snapshot bem-sucedido:
+`castwall` derives a status for each camera based on the last successful snapshot:
 
 - `fresh`
-  - camera atualizando no ritmo esperado
-  - badge `Ao vivo` no card
-  - icone `camera.*` no floorplan fica em `device-on`
+  - camera is updating on schedule
+  - `Live` badge on the card
+  - `camera.*` icon on the floorplan uses `device-on`
 
 - `stale`
-  - camera ainda tem ultimo snapshot conhecido, mas ja esta atrasada para o perfil atual
-  - badge `Atrasada` no card
-  - icone `camera.*` no floorplan fica em `device-stale`
+  - the last known snapshot still exists, but it is already behind the current profile expectation
+  - `Stale` badge on the card
+  - `camera.*` icon on the floorplan uses `device-stale`
 
 - `offline`
-  - camera sem snapshot recente ou sem snapshot inicial
-  - badge `Offline` no card
-  - icone `camera.*` no floorplan fica em `device-unavailable`
+  - no recent snapshot or no initial snapshot at all
+  - `Offline` badge on the card
+  - `camera.*` icon on the floorplan uses `device-unavailable`
 
-Esses dados saem em dois lugares:
+These values are exposed in two places:
 
-- `GET /health` em `camera_status`
-- `GET /api/floorplan/state` em `cameras`
+- `GET /health` under `camera_status`
+- `GET /api/floorplan/state` under `cameras`
 
-Comportamento atual:
+Current behavior:
 
-- caminho preferencial: stream continuo de eventos
-- fallback automatico: consulta rapida de estado quando o navegador do Chromecast nao sustenta o stream
-- cameras continuam em refresh proprio conforme o perfil ativo
+- preferred path: continuous event stream
+- automatic fallback: lightweight polling when the Chromecast browser cannot keep the stream alive
+- cameras still refresh independently according to the active profile
 
-## Alertas de movimento e deteccao
+## Motion and detection alerts
 
-O floorplan suporta um pipeline de alertas separado do estado normal dos ambientes:
+The floorplan supports an alert pipeline that is separate from the normal room-state rendering:
 
 - `room-alert-on`
-  - pinta ambientes em `#e9afafff`
-  - tem precedencia visual sobre `room-light-on`
+  - paints areas with `#e9afafff`
+  - visually overrides `room-light-on`
 
 - `motion-on`
-  - revela elementos de alerta que devem ficar escondidos por padrao, como `movimento.garagem`
+  - reveals alert-only elements that should stay hidden by default, such as `movimento.garagem`
 
-O mapeamento desses alertas mora em `config/floorplan/mapeamento.yaml`, na secao `alertas`.
+Alert mappings live in `config/floorplan/mapeamento.yaml` under the `alertas` section.
 
-Estado atual:
+Current state:
 
 - `binary_sensor.garagem_movimento`
-  - mostra `movimento.garagem`
-  - pinta `ambiente.garagem`
+  - reveals `movimento.garagem`
+  - highlights `ambiente.garagem`
 
 - `input_boolean.alerta_camera_varanda_pessoa`
-  - helper temporario para pintar `ambiente.varanda` e `ambiente.piscina`
+  - temporary helper used to highlight `ambiente.varanda` and `ambiente.piscina`
 
 - `input_boolean.alerta_camera_rua_deteccao`
-  - helper temporario para pintar `ambiente.rua`
+  - temporary helper used to highlight `ambiente.rua`
 
-Os dois helpers das cameras existem porque, hoje, o HA nao expoe entidades ou device triggers vivos de pessoa detectada / movimento detectado para as Tapo `rua` e `varanda`. Quando esse source real existir, basta apontar o `entity_id` correspondente no mapa de alertas.
+Those camera helpers exist because Home Assistant does not currently expose a live person-detected or motion-detected entity/device trigger for the Tapo `rua` and `varanda` cameras. When that real source becomes available, the only required change is to point the alert mapping to the proper `entity_id`.
 
-## Controle de perfis pelo Home Assistant
+## Quality profile control from Home Assistant
 
-O Home Assistant expoe tres `rest_command` para troca de perfil:
+Home Assistant exposes three `rest_command` entries to switch profiles:
 
 - `rest_command.cast_camera_wall_profile_economy`
 - `rest_command.cast_camera_wall_profile_normal`
 - `rest_command.cast_camera_wall_profile_near_live`
 
-Tambem existe um helper de selecao:
+There is also a selector helper:
 
 - `input_select.castwall_perfil_dashboard_tv`
 
-E os scripts de uso diario:
+And the day-to-day scripts:
 
 - `script.perfil_dashboard_tv_economia`
 - `script.perfil_dashboard_tv_normal`
 - `script.perfil_dashboard_tv_quase_live`
-
-O fluxo esperado e:
-
-1. selecionar o perfil desejado no helper ou por script
-2. chamar o `rest_command` correspondente
-3. o `castwall` persistir o perfil
-4. se o cast estiver ativo, recastar a pagina automaticamente
-
-## Start automatico apos ligar a TV
-
-O inicio automatico do dashboard mora no Home Assistant, nao no castwall. O helper `input_boolean.auto_iniciar_dashboard_tv` permite desligar esse comportamento sem editar arquivos.
-
-A automacao `TV - Auto iniciar dashboard das cameras` observa `media_player.quarto_do_vroou` voltando de `unavailable`/`unknown` para um estado acessivel. Isso inclui o retorno para `off`, que neste Chromecast significa estado ocioso e pronto para receber o dashboard. Depois disso ela aplica um atraso curto e chama `script.mostrar_cameras_na_tv`.
-
-Separacao de responsabilidades:
-
-- Home Assistant detecta o momento certo de iniciar o cast.
-- O watchdog do castwall mantem o DashCast vivo depois que a sessao ja existe.
-
-## Runtime de rede do host
-
-Este computador pode operar de duas formas:
-
-- com `Ethernet`
-- com `Wi-Fi`
-
-Como Chromecast e cameras estao na rede mesh, o `castwall` precisa publicar o dashboard no IP correto do host.
-
-Para isso, existe um estado de rede externo lido em:
-
-- `config/www/castwall/runtime/network.json`
-
-Esse arquivo e gerado pelo script:
-
-- [Update-CastwallNetworkState.ps1](C:/HomeAssistant/scripts/Update-CastwallNetworkState.ps1)
-
-E o startup principal chama esse script antes de subir os containers:
-
-- [Start-HomeAssistant.ps1](C:/HomeAssistant/scripts/Start-HomeAssistant.ps1)
-
-## Regra atual de escolha de IP
-
-Quando `Ethernet` e `Wi-Fi` estao ativos ao mesmo tempo, o script:
-
-- lista os IPv4 reais da maquina
-- ignora interfaces virtuais como `Hyper-V` e `WSL`
-- considera os alvos configurados para Chromecast e cameras
-- prefere a interface na mesma sub-rede dos dispositivos
-- favorece `Wi-Fi` quando ele bate com Chromecast e cameras
-
-No estado validado, isso escolheu:
-
-- `Wi-Fi`
-- IP `192.168.5.191`
-
-Mesmo com o cabo ativo em `192.168.15.142`.
-
-## Efeito pratico
-
-Com isso, o fluxo esperado fica assim:
-
-- trabalho normal da maquina pode continuar pelo cabo
-- o dashboard do Chromecast e publicado pelo IP do `Wi-Fi`
-- cameras e Chromecast continuam alcancaveis pela rede mesh
-
-## Estado atual validado
-
-No estado atual:
-
-- `CAST_MODE: direct`
-- `PUBLIC_URL: http://192.168.5.191:8090/`
-- perfis `economy`, `normal` e `near_live` funcionando
-- floorplan ativo no dashboard
-- layout com planta na esquerda e cameras na direita
-- cast funcionando no `Quarto do vroou`
-
-## Fluxo do repositorio
-
-A partir de `28/03/2026`, toda tarefa nova deve seguir fluxo por PR.
-
-Regra de trabalho:
-
-- criar branch a partir de `main`
-- usar prefixo `codex/`
-- implementar e validar fora de `main`
-- abrir PR para acompanhamento
-- mergear em `main` somente depois
-
-Isso passa a fazer parte do contexto de manutencao deste projeto.
-
-## Comandos uteis
-
-Rebuild do `castwall`:
-
-```powershell
-docker compose up -d --build castwall
-```
-
-Consultar o perfil atual:
-
-```powershell
-Invoke-RestMethod -Uri http://127.0.0.1:8090/api/profile
-```
-
-Trocar o perfil atual:
-
-```powershell
-Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8090/api/profile/economy
-```
-
-Atualizar o estado de rede sem reiniciar tudo:
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File C:\HomeAssistant\scripts\Update-CastwallNetworkState.ps1
-```
-
-## Pendencia futura registrada
-
-Objetivo futuro:
-
-- deixar o cast funcionar de forma transparente tanto no `Ethernet` quanto no `Wi-Fi`, sem depender de ajuste manual
