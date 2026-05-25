@@ -46,6 +46,14 @@ This project treats the house as a living system that can evolve over time:
 - Chromecast delivery with recovery logic and runtime quality profiles
 - network-aware host IP selection for mixed Ethernet and Wi-Fi environments
 
+## Visual preview
+
+The images below were exported from the current `castwall` dashboard assets and reflect the real project layout used for TV delivery.
+
+| Floorplan | Street camera | Porch camera |
+|---|---|---|
+| ![Castwall floorplan](docs/images/castwall-floorplan.svg) | ![Castwall street camera](docs/images/castwall-rua.jpg) | ![Castwall porch camera](docs/images/castwall-varanda.jpg) |
+
 ## Core stack
 
 ### Platform

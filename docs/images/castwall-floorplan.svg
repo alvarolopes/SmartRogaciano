@@ -1,0 +1,289 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="210mm"
+   height="297mm"
+   viewBox="0 0 210 297"
+   version="1.1"
+   id="svg1"
+   inkscape:version="1.4.2 (f4327f4, 2025-05-13)"
+   sodipodi:docname="rogaciano.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     inkscape:zoom="1.5803732"
+     inkscape:cx="401.80383"
+     inkscape:cy="588.46861"
+     inkscape:window-width="3840"
+     inkscape:window-height="2036"
+     inkscape:window-x="-12"
+     inkscape:window-y="-12"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs1" />
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <rect
+       style="fill:#ffeeaa;stroke-width:0.264583"
+       id="ambiente.rua"
+       width="132.42784"
+       height="11.886697"
+       x="75.003372"
+       y="281.76489"
+       inkscape:label="ambiente.rua" />
+    <rect
+       style="fill:#ffeeaa;stroke-width:0.264583"
+       id="ambiente.escada"
+       width="17.24408"
+       height="73.998871"
+       x="190.35457"
+       y="206.42671"
+       inkscape:label="ambiente.escada" />
+    <rect
+       style="display:inline;fill:#ffeeaa;stroke-width:0.264583"
+       id="ambiente.garagem"
+       width="113.17474"
+       height="73.161781"
+       x="75.67305"
+       y="206.76155"
+       inkscape:label="ambiente.garagem" />
+    <rect
+       style="fill:#ffeeaa;stroke-width:0.264583"
+       id="ambiente.piscina"
+       width="113.17474"
+       height="73.161781"
+       x="-39.892822"
+       y="207.01775"
+       inkscape:label="ambiente.piscina" />
+    <rect
+       style="fill:#ffeeaa;stroke-width:0.264583"
+       id="ambiente.varanda"
+       width="131.75816"
+       height="19.085682"
+       x="75.840469"
+       y="186.33653"
+       inkscape:label="ambiente.varanda" />
+    <rect
+       style="fill:#ffeeaa;stroke-width:0.322167"
+       id="ambiente.sala"
+       width="81.197861"
+       height="51.397408"
+       x="76.510139"
+       y="133.43237"
+       inkscape:label="ambiente.sala" />
+    <rect
+       style="fill:#ffeeaa;stroke-width:0.281189"
+       id="ambiente.quarto_caru"
+       width="36.832016"
+       height="34.655579"
+       x="170.59921"
+       y="149.67195"
+       inkscape:label="ambiente.quarto_caru" />
+    <rect
+       style="fill:#ffeeaa;stroke-width:0.281189"
+       id="ambiente.quarto_marcos"
+       width="36.832016"
+       height="34.655579"
+       x="170.73103"
+       y="113.82324"
+       inkscape:label="ambiente.quarto_marcos" />
+    <rect
+       style="fill:#ffeeaa;stroke-width:0.23526"
+       id="ambiente.quarto_vroou"
+       width="25.78241"
+       height="34.655579"
+       x="181.90614"
+       y="78.258011"
+       inkscape:label="ambiente.quarto_vroou" />
+    <rect
+       style="fill:#ffeeaa;stroke-width:0.318919"
+       id="ambiente.quarto_mamae"
+       width="47.379364"
+       height="34.655579"
+       x="187.02414"
+       y="42.871571"
+       inkscape:label="ambiente.quarto_mamae" />
+    <rect
+       style="fill:#ffeeaa;stroke-width:0.417501"
+       id="ambiente.cozinha"
+       width="81.197853"
+       height="34.655579"
+       x="76.557816"
+       y="78.382088"
+       inkscape:label="ambiente.cozinha" />
+    <rect
+       style="fill:#ffeeaa;stroke-width:0.200266"
+       id="ambiente.banheiro_social"
+       width="36.832016"
+       height="17.578917"
+       x="120.4466"
+       y="114.28357"
+       inkscape:label="ambiente.banheiro_social" />
+    <rect
+       style="fill:#ffeeaa;stroke-width:0.217653"
+       id="ambiente.area"
+       width="42.691654"
+       height="17.913752"
+       x="76.808495"
+       y="114.39263"
+       inkscape:label="ambiente.area" />
+    <rect
+       style="fill:#ffeeaa;stroke-width:0.513324"
+       id="ambiente.lavanderia"
+       width="81.700111"
+       height="52.067078"
+       x="76.954651"
+       y="16.27928"
+       inkscape:label="ambiente.lavanderia" />
+    <rect
+       style="fill:#ffeeaa;stroke-width:0.175807"
+       id="ambiente.banheiro_mamae"
+       width="14.397968"
+       height="34.655579"
+       x="171.33328"
+       y="42.699318"
+       inkscape:label="ambiente.banheiro_mamae" />
+    <rect
+       style="fill:#ffeeaa;stroke-width:0.861066"
+       id="ambiente.terraco"
+       width="113.84441"
+       height="105.13866"
+       x="-39.377262"
+       y="78.802193"
+       inkscape:label="ambiente.terraco" />
+    <circle
+       style="fill:#000000;stroke-width:0.264583"
+       id="camera.rua"
+       cx="198.47437"
+       cy="283.18799"
+       r="1.4230553"
+       inkscape:label="camera.rua" />
+    <circle
+       style="fill:#000000;stroke-width:0.264583"
+       id="lampada.garagem"
+       cx="129.69789"
+       cy="242.44064"
+       r="1.4230553"
+       inkscape:label="lampada.garagem" />
+    <circle
+       style="fill:#000000;stroke-width:0.264583"
+       id="lampada.escada"
+       cx="199.35829"
+       cy="244.8131"
+       r="1.4230553"
+       inkscape:label="lampada.escada" />
+    <circle
+       style="fill:#000000;stroke-width:0.264583"
+       id="lampada.piscina1"
+       cx="-37.565239"
+       cy="278.01404"
+       r="1.4230553"
+       inkscape:label="lampada.piscina1" />
+    <circle
+       style="fill:#000000;stroke-width:0.264583"
+       id="lampada.piscina2"
+       cx="70.427406"
+       cy="278.38202"
+       r="1.4230553"
+       inkscape:label="lampada.piscina2" />
+    <circle
+       style="fill:#000000;stroke-width:0.264583"
+       id="lampada.piscina3"
+       cx="-37.744648"
+       cy="253.90381"
+       r="1.4230553"
+       inkscape:label="lampada.piscina3" />
+    <circle
+       style="fill:#000000;stroke-width:0.264583"
+       id="lampada.piscina4"
+       cx="-38.330158"
+       cy="227.40584"
+       r="1.4230553"
+       inkscape:label="lampada.piscina4" />
+    <circle
+       style="fill:#000000;stroke-width:0.264583"
+       id="lampada.terraco1"
+       cx="71.546715"
+       cy="181.36241"
+       r="1.4230553"
+       inkscape:label="lampada.terraco1" />
+    <circle
+       style="fill:#000000;stroke-width:0.264583"
+       id="lampada.terraco3"
+       cx="17.515362"
+       cy="111.40223"
+       r="1.4230553"
+       inkscape:label="lampada.terraco3" />
+    <circle
+       style="fill:#000000;stroke-width:0.264583"
+       id="lampada.terraco2"
+       cx="-37.062984"
+       cy="181.06465"
+       r="1.4230553"
+       inkscape:label="lampada.terraco2" />
+    <circle
+       style="fill:#000000;stroke-width:0.264583"
+       id="lampada.quarto_vroou"
+       cx="183.44965"
+       cy="96.201447"
+       r="1.4230553"
+       inkscape:label="lampada.quarto_vroou" />
+    <circle
+       style="fill:#000000;stroke-width:0.264583"
+       id="camera.varanda"
+       cx="173.98299"
+       cy="188.01187"
+       r="1.4230553"
+       inkscape:label="camera.varanda" />
+    <rect
+       style="fill:#000000;stroke-width:0.264583"
+       id="arcondicionado.quarto_vroou"
+       width="2.1764374"
+       height="12.891206"
+       x="205.42221"
+       y="89.736191"
+       inkscape:label="arcondicionado.quarto_vroou" />
+    <rect
+       style="fill:#000000;stroke-width:0.264583"
+       id="televisao.quarto_vroou"
+       width="13.058624"
+       height="1.5067644"
+       x="190.68941"
+       y="78.854004"
+       inkscape:label="televisao.quarto_vroou" />
+    <path
+       sodipodi:type="star"
+       style="fill:#000000;stroke-width:0.264583"
+       id="ventilador.quarto_vroou"
+       inkscape:flatsided="true"
+       sodipodi:sides="5"
+       sodipodi:cx="187.50845"
+       sodipodi:cy="101.62289"
+       sodipodi:r1="5.2303138"
+       sodipodi:r2="4.2314129"
+       sodipodi:arg1="0.87605805"
+       sodipodi:arg2="1.5043766"
+       inkscape:rounded="0"
+       inkscape:randomized="0"
+       d="m 190.85682,105.64092 -6.13505,0.40809 -2.28394,-5.70866 4.72348,-3.936244 5.20323,3.275938 z"
+       inkscape:transform-center-x="-0.0088252857"
+       inkscape:transform-center-y="-0.32257684"
+       transform="matrix(0.66084535,0.04942978,-0.04942978,0.66084535,76.115199,20.423506)"
+       inkscape:label="ventilador.quarto_vroou" />
+  </g>
+</svg>
