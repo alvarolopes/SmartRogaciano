@@ -1,12 +1,29 @@
-# Rogaciano
+# SmartRogaciano
+
+> A personal smart home platform built with Home Assistant, floorplan-based control, low-cost device integrations, and a custom Chromecast dashboard pipeline.
 
 A personal smart home project focused on building a practical, low-cost home automation stack with the tools and devices already available in the house.
 
 This repository documents a real Home Assistant environment running on Docker for Windows, combining floorplan-based control, Tapo cameras, Tuya devices, and a custom Chromecast delivery workflow. The goal is not to build a perfect lab setup. The goal is to build something reliable, maintainable, and useful in everyday life.
 
+## Project identity
+
+`SmartRogaciano` is the public-facing name of this project.
+
+It represents a practical smart house platform built around:
+
+- Home Assistant as the automation core
+- a real floorplan as the interaction layer
+- low-cost integrations such as Tapo and Tuya
+- a custom TV delivery flow for large-screen monitoring
+
+Short GitHub description:
+
+`A personal smart home project using Home Assistant, SVG floorplans, Tapo, Tuya, and a custom Chromecast dashboard service.`
+
 ## Vision
 
-Rogaciano is an incremental smart house project built around three ideas:
+SmartRogaciano is an incremental smart house project built around three ideas:
 
 - start with limited resources instead of waiting for a full premium ecosystem
 - integrate devices automatically whenever possible, even across different vendors
