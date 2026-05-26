@@ -1,6 +1,6 @@
 # SmartRogaciano
 
-<img width="1536" height="1024" alt="smartrogaciano" src="https://github.com/user-attachments/assets/1088f301-acb8-4b21-a92a-f6527cbbe186" />
+<img width="1024" height="1024" alt="Gemini_Generated_Image_6f6b766f6b766f6b" src="https://github.com/user-attachments/assets/aef5f5da-c48c-4581-ab7f-1e75228ff3b7" />
 
 > A personal smart home platform built with Home Assistant, floorplan-based control, low-cost device integrations, and a custom Chromecast dashboard pipeline.
 
