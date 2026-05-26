@@ -1,5 +1,7 @@
 # SmartRogaciano
 
+<img width="1536" height="1024" alt="smartrogaciano" src="https://github.com/user-attachments/assets/1088f301-acb8-4b21-a92a-f6527cbbe186" />
+
 > A personal smart home platform built with Home Assistant, floorplan-based control, low-cost device integrations, and a custom Chromecast dashboard pipeline.
 
 A personal smart home project focused on building a practical, low-cost home automation stack with the tools and devices already available in the house.
